@@ -2,6 +2,8 @@
 
 Keep it there. Use it here.
 
+[RUSSIAN VERSION](README_RU.md)
+
 Yonder is a small desktop utility for keeping files in one ordinary storage folder
 and making them available where applications expect them through symbolic links.
 The storage may be synchronized by any cloud client; Yonder does not provide its
@@ -28,9 +30,16 @@ and resolving conflicts will follow as separate, explicitly confirmed steps.
 
 ## Technical direction
 
-The planned foundation is Electron, JavaScript ESM, Vue 3, Vite, and YAML. macOS
-is the first verification target. Linux and Windows are considered in the design,
-but will not be claimed as supported until they are tested natively.
+The interface is a Vue 3 application built with Vite and JavaScript ESM. Electron
+is its thin desktop shell: native dialogs and guarded filesystem access stay behind
+a narrow preload API instead of being exposed directly to the renderer. The project
+uses Yarn Classic and keeps dependencies deliberately small.
+
+English is the canonical interface language and fallback. Russian is the first
+complete additional localization; both language resources keep the same structure.
+
+macOS is the first verification target. Linux and Windows are considered in the
+design, but will not be claimed as supported until they are tested natively.
 
 The interface starts as one compact window with a light, Nord-inspired visual theme.
 Development proceeds in small, reviewed steps.
