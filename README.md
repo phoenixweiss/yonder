@@ -44,6 +44,19 @@ design, but will not be claimed as supported until they are tested natively.
 The interface starts as one compact window with a light, Nord-inspired visual theme.
 Development proceeds in small, reviewed steps.
 
+## Development
+
+Yonder currently requires Node.js 24 and Yarn Classic `1.22.22`.
+
+```sh
+corepack yarn install --frozen-lockfile
+corepack yarn quality
+```
+
+`corepack yarn dev` opens the Electron window and should be run deliberately.
+
+See the [changelog](CHANGELOG.md) for user-visible changes.
+
 ## License
 
 [MIT](LICENSE), copyright 2026 PAVEL TKACHEV.

@@ -1,0 +1,13 @@
+shell:
+  tagline: Keep it there. Use it here.
+  title: Choose a storage
+  intro: Open an existing Yonder storage or prepare a new one in an ordinary folder.
+  open: Open storage…
+  create: Create storage…
+  hint: No files are accessed until the corresponding step is implemented and reviewed.
+  openNotice: Opening an existing storage will be added in the next read-only step. Nothing changed.
+  createNotice: Creating yonder.yaml will be added after its format is defined. Nothing changed.
+  foundation: Interface foundation · no file access
+  language: Language
+  systemLanguage: System default
+  languageSaveFailed: Language changed for this session only. The preference could not be saved.

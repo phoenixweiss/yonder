@@ -1,0 +1,10 @@
+node_modules/
+out/
+dist/
+coverage/
+test-results/
+playwright-report/
+tmp/
+AGENTS.md
+todo.tmp.md
+*.tmp.md
