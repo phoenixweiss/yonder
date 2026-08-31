@@ -1,0 +1,22 @@
+node_modules/
+out/
+dist/
+coverage/
+test-results/
+playwright-report/
+
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local working files.
+/work/
+/tmp/
+/AGENTS.md
+/todo.tmp.md
+/*.tmp.md
+
+# Personal runtime configurations.
+/yonder.yaml
+/yonder.yml
