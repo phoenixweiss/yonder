@@ -30,6 +30,10 @@ const selectedDisconnect = ref(null)
 const disconnectPreparation = ref(null)
 const disconnectErrorKey = ref('')
 const disconnectBusy = ref(false)
+const selectedRemoval = ref(null)
+const removalPreparation = ref(null)
+const removalErrorKey = ref('')
+const removalBusy = ref(false)
 const dashboardNoticeKey = ref('')
 const connectionDraftBusy = ref(false)
 const connectionDraftErrorKey = ref('')
@@ -113,6 +117,9 @@ function showWelcome() {
   selectedDisconnect.value = null
   disconnectPreparation.value = null
   disconnectErrorKey.value = ''
+  selectedRemoval.value = null
+  removalPreparation.value = null
+  removalErrorKey.value = ''
   dashboardNoticeKey.value = ''
   resetConnectionDraft()
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
@@ -136,6 +143,9 @@ async function openStorage() {
       selectedDisconnect.value = null
       disconnectPreparation.value = null
       disconnectErrorKey.value = ''
+      selectedRemoval.value = null
+      removalPreparation.value = null
+      removalErrorKey.value = ''
       resetConnectionDraft()
       view.value = 'dashboard'
       return
@@ -597,6 +607,102 @@ async function closeConnectionDisconnect() {
   selectedDisconnect.value = null
   disconnectPreparation.value = null
   disconnectErrorKey.value = ''
+  view.value = 'dashboard'
+}
+
+function connectionRemovalErrorKey(status) {
+  const keys = {
+    invalidSelection: 'removal.errors.invalidSelection',
+    selectionExpired: 'removal.errors.selectionExpired',
+    unsupportedPlatform: 'removal.errors.unsupportedPlatform',
+    operationBusy: 'removal.errors.operationBusy',
+    notDisconnected: 'removal.errors.notDisconnected',
+    multipleTargets: 'removal.errors.multipleTargets',
+    stateChanged: 'removal.errors.stateChanged',
+    writeFailed: 'removal.errors.writeFailed',
+    writeUncertain: 'removal.errors.writeUncertain',
+    notReady: 'removal.errors.notReady'
+  }
+  return keys[status] ?? 'removal.errors.unavailable'
+}
+
+function showConnectionRemoval(connection) {
+  selectedRemoval.value = connection
+  removalPreparation.value = null
+  removalErrorKey.value = ''
+  view.value = 'removal'
+}
+
+async function prepareSelectedConnectionRemoval() {
+  if (!selectedRemoval.value || removalBusy.value) return
+  removalErrorKey.value = ''
+  removalBusy.value = true
+  try {
+    const result = await window.yonder.prepareConnectionRemoval(
+      storageId.value,
+      selectedRemoval.value.id
+    )
+    if (result.status === 'ready') {
+      removalPreparation.value = result
+      return
+    }
+    removalErrorKey.value = connectionRemovalErrorKey(result.status)
+  } catch {
+    removalErrorKey.value = 'removal.errors.unavailable'
+  } finally {
+    removalBusy.value = false
+  }
+}
+
+async function confirmSelectedConnectionRemoval() {
+  if (!removalPreparation.value || removalBusy.value) return
+  const token = removalPreparation.value.token
+  removalErrorKey.value = ''
+  removalBusy.value = true
+  try {
+    const result = await window.yonder.confirmConnectionRemoval(token)
+    removalPreparation.value = null
+    if (result.status === 'removed') {
+      if (result.storageId && result.storage) {
+        storageId.value = result.storageId
+        storage.value = result.storage
+        dashboardNoticeKey.value = 'removal.removed'
+      } else {
+        dashboardNoticeKey.value = 'removal.removedRefreshFailed'
+      }
+      selectedRemoval.value = null
+      view.value = 'dashboard'
+      return
+    }
+    removalErrorKey.value = connectionRemovalErrorKey(result.status)
+  } catch {
+    removalPreparation.value = null
+    removalErrorKey.value = 'removal.errors.unavailable'
+  } finally {
+    removalBusy.value = false
+  }
+}
+
+async function closeConnectionRemoval() {
+  if (removalBusy.value) return
+  if (removalPreparation.value?.token) {
+    removalBusy.value = true
+    try {
+      const result = await window.yonder.cancelConnectionRemoval(removalPreparation.value.token)
+      if (!['cancelled', 'selectionExpired', 'invalidSelection'].includes(result.status)) {
+        removalErrorKey.value = connectionRemovalErrorKey(result.status)
+        return
+      }
+    } catch {
+      removalErrorKey.value = 'removal.errors.unavailable'
+      return
+    } finally {
+      removalBusy.value = false
+    }
+  }
+  selectedRemoval.value = null
+  removalPreparation.value = null
+  removalErrorKey.value = ''
   view.value = 'dashboard'
 }
 
@@ -1182,7 +1288,96 @@ async function confirmCreation() {
               {{ $t('disconnect.open') }}
             </button>
           </div>
+          <div
+            v-if="connection.state === 'targetMissing' && connection.readiness?.status === 'ready'"
+            class="connection-preview-line"
+          >
+            <p>
+              <strong>{{ $t('preview.nextStep') }}</strong>
+              {{ $t('removal.available') }}
+            </p>
+            <button
+              type="button"
+              class="secondary-action"
+              @click="showConnectionRemoval(connection)"
+            >
+              {{ $t('removal.open') }}
+            </button>
+          </div>
         </article>
+      </div>
+    </section>
+
+    <section
+      v-else-if="view === 'removal'"
+      class="connection-preview"
+      aria-labelledby="removal-title"
+    >
+      <h2 id="removal-title">{{ $t('removal.title') }}</h2>
+      <p class="intro">{{ $t('removal.intro', { name: selectedRemoval.name }) }}</p>
+
+      <div class="preview-panel">
+        <span>{{ $t('preview.proposedOperation') }}</span>
+        <strong>{{ $t('removal.operation') }}</strong>
+        <dl>
+          <div>
+            <dt>{{ $t('preview.source') }}</dt>
+            <dd>
+              <code>{{ selectedRemoval.sourcePath }}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ $t('preview.destination') }}</dt>
+            <dd>
+              <code>{{ selectedRemoval.targetPath }}</code>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <p class="preview-effect">{{ $t('removal.effect') }}</p>
+      <p class="preview-unchanged">{{ $t('removal.unchanged') }}</p>
+      <p class="preview-note">{{ $t('removal.note') }}</p>
+
+      <div v-if="removalPreparation" class="apply-confirmation" role="status">
+        <strong>{{ $t('removal.readyTitle') }}</strong>
+        <p>{{ $t('removal.readyText') }}</p>
+        <small
+          >{{ $t('removal.checkedAt') }} <code>{{ removalPreparation.checkedAt }}</code></small
+        >
+      </div>
+
+      <p v-if="removalErrorKey" class="flow-error apply-error" role="alert">
+        {{ $t(removalErrorKey) }}
+      </p>
+
+      <div class="flow-actions preview-actions">
+        <button
+          v-if="!removalPreparation && !removalErrorKey"
+          type="button"
+          class="primary-action"
+          :disabled="removalBusy"
+          @click="prepareSelectedConnectionRemoval"
+        >
+          {{ removalBusy ? $t('removal.preparing') : $t('removal.prepare') }}
+        </button>
+        <button
+          v-if="removalPreparation"
+          type="button"
+          class="danger-action"
+          :disabled="removalBusy"
+          @click="confirmSelectedConnectionRemoval"
+        >
+          {{ removalBusy ? $t('removal.removing') : $t('removal.confirm') }}
+        </button>
+        <button
+          type="button"
+          class="secondary-action"
+          :disabled="removalBusy"
+          @click="closeConnectionRemoval"
+        >
+          {{ removalPreparation ? $t('removal.cancel') : $t('removal.back') }}
+        </button>
       </div>
     </section>
 

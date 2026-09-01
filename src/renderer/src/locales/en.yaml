@@ -143,6 +143,38 @@ preview:
     sourceUnsafe: Use a direct regular file or folder inside storage, not a symbolic link.
     sourceUnsupported: The source must be a regular file or folder.
     inspectionFailed: Resolve the inspection problem, then check again. No change is proposed.
+removal:
+  available: Remove this disconnected definition from yonder.yaml while keeping all files.
+  open: Remove definition…
+  title: Remove connection definition
+  intro: Review the exact configuration entry that would be removed for “{{name}}”.
+  operation: Remove one yonder.yaml entry
+  effect: After fresh checks, Yonder will atomically remove only this disconnected connection definition from yonder.yaml.
+  unchanged: The source, destination folder, every filesystem entry, and every other connection remain unchanged.
+  note: This screen is a read-only preview. Preparation rereads the configuration, source, and absent destination; one final confirmation is still required.
+  prepare: Prepare removal
+  preparing: Checking again…
+  readyTitle: Fresh checks completed
+  readyText: The expected macOS destination is still absent. Confirm once to replace only yonder.yaml without deleting data.
+  checkedAt: 'Checked at:'
+  confirm: Remove this definition
+  removing: Updating configuration…
+  cancel: Cancel removal
+  back: Back to storage
+  removed: The disconnected definition was removed from yonder.yaml. No source or destination data was deleted.
+  removedRefreshFailed: The definition was removed, but the dashboard could not be refreshed. Open the storage again before continuing.
+  errors:
+    invalidSelection: This storage selection has expired. Open the folder again.
+    selectionExpired: This one-time confirmation has expired. Return to the storage and prepare removal again.
+    unsupportedPlatform: Configuration removal is currently available only on verified macOS builds.
+    operationBusy: Another configuration operation is still active. Wait and try again.
+    notDisconnected: The expected destination is no longer safely absent. Nothing was changed; check the storage again.
+    multipleTargets: This definition has targets for more than macOS and is outside this narrow removal step. Nothing was changed.
+    stateChanged: The configuration, source, destination, or parent folder changed during preparation. Nothing was changed; check again.
+    writeFailed: Yonder could not replace yonder.yaml. The original configuration remains in place.
+    writeUncertain: Yonder could not prove the final yonder.yaml state. Do not repeat the action blindly; reopen and inspect the storage first.
+    notReady: This connection is not ready for safe configuration removal. Nothing was changed.
+    unavailable: Yonder could not prepare or complete configuration removal. No data was deleted.
 disconnect:
   available: Remove this verified link later without changing the configuration or source.
   open: Disconnect…

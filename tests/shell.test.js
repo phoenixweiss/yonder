@@ -152,3 +152,21 @@ test('connection disconnect exposes only identifiers and one-time confirmation t
   assert.match(mainSource, /disconnectController\.prepare\([\s\S]*?disconnectStorage\.folderPath/)
   assert.match(mainSource, /disconnectController\.confirm\(token\)/)
 })
+
+test('connection removal exposes only identifiers and one-time confirmation tokens', async () => {
+  const [appSource, preloadSource, mainSource] = await Promise.all([
+    readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
+    readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/main/index.js', import.meta.url), 'utf8')
+  ])
+
+  assert.match(appSource, /showConnectionRemoval\(connection\)/)
+  assert.match(appSource, /prepareConnectionRemoval\([\s\S]*?storageId\.value/)
+  assert.match(appSource, /confirmConnectionRemoval\(token\)/)
+  assert.match(preloadSource, /connection:prepare-removal/)
+  assert.match(preloadSource, /connection:confirm-removal/)
+  assert.match(preloadSource, /connection:cancel-removal/)
+  assert.doesNotMatch(preloadSource, /configPath|sourcePath|targetPath|resultingSource/)
+  assert.match(mainSource, /removalController\.prepare\([\s\S]*?removalStorage\.folderPath/)
+  assert.match(mainSource, /removalController\.confirm\(token\)/)
+})

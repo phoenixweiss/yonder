@@ -13,6 +13,7 @@ import {
   createConnectionDisconnectController
 } from './connection-disconnect.js'
 import { ConnectionDraftError, createConnectionDraftController } from './connection-draft.js'
+import { ConnectionRemovalError, createConnectionRemovalController } from './connection-removal.js'
 import { inspectStorage, StorageInspectionError } from './inspection.js'
 import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
 import { CONFIG_FILENAME } from '../shared/config.js'
@@ -24,9 +25,11 @@ let applyController
 let draftController
 let authoringController
 let disconnectController
+let removalController
 let pendingApplyStorageId = ''
 let pendingDraftStorageId = ''
 let pendingDisconnectStorageId = ''
+let pendingRemovalStorageId = ''
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 const nativeHelperPath = fileURLToPath(
   new URL('../../build/native/yonder-link-helper', import.meta.url)
@@ -74,9 +77,11 @@ function createWindow() {
     draftController?.clear()
     authoringController?.clear()
     disconnectController?.clear()
+    removalController?.clear()
     pendingApplyStorageId = ''
     pendingDraftStorageId = ''
     pendingDisconnectStorageId = ''
+    pendingRemovalStorageId = ''
     mainWindow = undefined
     pendingCreation = undefined
     activeStorage = undefined
@@ -100,6 +105,11 @@ async function clearPendingDisconnect() {
   await disconnectController?.clear()
 }
 
+function clearPendingRemoval() {
+  pendingRemovalStorageId = ''
+  removalController?.clear()
+}
+
 function clearPendingDraft() {
   pendingDraftStorageId = ''
   authoringController?.clear()
@@ -116,6 +126,7 @@ function installStorageHandlers() {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
+    clearPendingRemoval()
     clearPendingDraft()
 
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -144,6 +155,7 @@ function installStorageHandlers() {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
+    clearPendingRemoval()
     clearPendingDraft()
     if (typeof storageId !== 'string' || storageId !== activeStorage?.id) {
       return { status: 'invalidSelection' }
@@ -168,6 +180,7 @@ function installStorageHandlers() {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
+    clearPendingRemoval()
     clearPendingDraft()
     pendingCreation = undefined
 
@@ -195,6 +208,7 @@ function installStorageHandlers() {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
+    clearPendingRemoval()
     clearPendingDraft()
     if (
       !request ||
@@ -347,6 +361,7 @@ function installStorageHandlers() {
 
     await clearPendingApply()
     await clearPendingDisconnect()
+    clearPendingRemoval()
     if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
 
     const draftStorage = { ...activeStorage }
@@ -428,6 +443,7 @@ function installStorageHandlers() {
 
     clearPendingAuthoring()
     await clearPendingDisconnect()
+    clearPendingRemoval()
     if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
 
     const applyStorage = { ...activeStorage }
@@ -505,6 +521,7 @@ function installStorageHandlers() {
 
     clearPendingAuthoring()
     await clearPendingApply()
+    clearPendingRemoval()
     if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
     const disconnectStorage = { ...activeStorage }
     try {
@@ -567,6 +584,78 @@ function installStorageHandlers() {
       }
     }
   })
+
+  ipcMain.handle('connection:prepare-removal', async (event, request) => {
+    if (!isTrustedIpcEvent(event) || !removalController) return { status: 'unavailable' }
+    if (
+      !request ||
+      Object.keys(request).length !== 2 ||
+      typeof request.storageId !== 'string' ||
+      typeof request.connectionId !== 'string' ||
+      request.storageId !== activeStorage?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    clearPendingAuthoring()
+    await clearPendingApply()
+    await clearPendingDisconnect()
+    if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
+    const removalStorage = { ...activeStorage }
+    try {
+      const result = await removalController.prepare(
+        removalStorage.folderPath,
+        request.connectionId,
+        app.getPath('home')
+      )
+      if (activeStorage?.id !== removalStorage.id) {
+        clearPendingRemoval()
+        return { status: 'invalidSelection' }
+      }
+      pendingRemovalStorageId = removalStorage.id
+      return result
+    } catch (error) {
+      pendingRemovalStorageId = ''
+      return { status: error instanceof ConnectionRemovalError ? error.code : 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('connection:confirm-removal', async (event, token) => {
+    if (!isTrustedIpcEvent(event) || !removalController) return { status: 'unavailable' }
+    if (!activeStorage || pendingRemovalStorageId !== activeStorage.id) {
+      return { status: 'invalidSelection' }
+    }
+
+    const removalStorage = { ...activeStorage }
+    pendingRemovalStorageId = ''
+    try {
+      const result = await removalController.confirm(token)
+      if (activeStorage?.id !== removalStorage.id || result.connectionId === undefined) {
+        return { status: 'removed', refreshFailed: true }
+      }
+      try {
+        const storage = await inspectStorage(removalStorage.folderPath, {
+          homeDirectory: app.getPath('home'),
+          systemPlatform: process.platform
+        })
+        return { status: 'removed', storageId: removalStorage.id, storage }
+      } catch {
+        return { status: 'removed', refreshFailed: true }
+      }
+    } catch (error) {
+      return { status: error instanceof ConnectionRemovalError ? error.code : 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('connection:cancel-removal', async (event, token) => {
+    if (!isTrustedIpcEvent(event) || !removalController) return { status: 'unavailable' }
+    pendingRemovalStorageId = ''
+    try {
+      return await removalController.cancel(token)
+    } catch (error) {
+      return { status: error instanceof ConnectionRemovalError ? error.code : 'unavailable' }
+    }
+  })
 }
 
 app.whenReady().then(async () => {
@@ -578,6 +667,7 @@ app.whenReady().then(async () => {
     previewDraft: (storagePath, request) => draftController.preview(storagePath, request)
   })
   disconnectController = createConnectionDisconnectController({ executable: nativeHelperPath })
+  removalController = createConnectionRemovalController()
   try {
     const journal = await openApplyJournal(join(app.getPath('userData'), 'operation-journal'))
     applyController = createConnectionApplyController({

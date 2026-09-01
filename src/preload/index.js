@@ -72,7 +72,11 @@ const api = Object.freeze({
     ipcRenderer.invoke('connection:prepare-disconnect', { storageId, connectionId }),
   confirmConnectionDisconnect: (token) =>
     ipcRenderer.invoke('connection:confirm-disconnect', token),
-  cancelConnectionDisconnect: (token) => ipcRenderer.invoke('connection:cancel-disconnect', token)
+  cancelConnectionDisconnect: (token) => ipcRenderer.invoke('connection:cancel-disconnect', token),
+  prepareConnectionRemoval: (storageId, connectionId) =>
+    ipcRenderer.invoke('connection:prepare-removal', { storageId, connectionId }),
+  confirmConnectionRemoval: (token) => ipcRenderer.invoke('connection:confirm-removal', token),
+  cancelConnectionRemoval: (token) => ipcRenderer.invoke('connection:cancel-removal', token)
 })
 
 contextBridge.exposeInMainWorld('yonder', api)
