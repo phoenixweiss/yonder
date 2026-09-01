@@ -15,6 +15,9 @@ try {
 
 const api = Object.freeze({
   systemLanguages,
+  chooseStorageFolderForOpening: (language) =>
+    ipcRenderer.invoke('storage:choose-for-opening', language === 'ru' ? 'ru' : 'en'),
+  recheckStorage: (storageId) => ipcRenderer.invoke('storage:recheck', storageId),
   chooseStorageFolderForCreation: (language) =>
     ipcRenderer.invoke('storage:choose-for-creation', language === 'ru' ? 'ru' : 'en'),
   createStorageConfig: (selectionId, name) =>

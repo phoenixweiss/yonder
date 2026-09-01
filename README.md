@@ -17,13 +17,14 @@ own cloud, account, server, or telemetry.
 - Existing files are never replaced silently.
 - A human-readable `yonder.yaml` describes the connections.
 
-## First milestone
+## Read-only inspection
 
-The first connection-inspection milestone stays deliberately small and read-only:
+Yonder can open an existing storage and inspect it without changing files:
 
 1. Open an existing storage.
 2. Show every storage path and computer path directly.
-3. Check connection state without changing files.
+3. Distinguish connected links, missing targets, occupied paths, wrong links,
+   missing storage items, and connections not configured for this operating system.
 
 Creating a new empty `yonder.yaml` is available as a separate flow: Yonder shows
 the selected folder, storage name, and exact new file before asking for confirmation.
@@ -38,6 +39,8 @@ Unknown fields, unsafe paths, duplicate identifiers, and overlapping targets are
 rejected before any filesystem action. See the [fictional example](examples/yonder.yaml).
 When creating a storage, Yonder writes only a new `yonder.yaml` with an empty
 connection list. It uses exclusive creation and never replaces an existing file.
+Configuration reads are size-limited and strict. Rechecking refreshes the displayed
+state but never creates links, moves files, or changes the configuration.
 
 ## Technical direction
 

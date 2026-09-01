@@ -143,6 +143,7 @@ button:disabled {
 
 .storage-actions button,
 .flow-actions button,
+.dashboard-actions button,
 .created-state > button {
   min-height: 40px;
   padding: 8px 12px;
@@ -198,6 +199,16 @@ footer {
   min-height: 38px;
   max-width: 460px;
   margin: 7px auto 0;
+}
+
+.notice code {
+  display: block;
+  margin-top: 3px;
+}
+
+.notice-error,
+.dashboard-error {
+  color: #8c4f4f;
 }
 
 .creation-flow,
@@ -337,6 +348,191 @@ code {
   margin-top: 16px;
 }
 
+.dashboard {
+  min-height: 0;
+  padding: 15px 24px 18px;
+  overflow-y: auto;
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+
+.storage-heading {
+  min-width: 0;
+}
+
+.storage-heading h2 {
+  margin: 0 0 2px;
+  font-size: 21px;
+  font-weight: 550;
+  letter-spacing: -0.35px;
+}
+
+.storage-heading > code {
+  display: block;
+  max-width: 370px;
+  color: var(--neutral);
+}
+
+.dashboard-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.dashboard-actions button {
+  min-height: 35px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 13px;
+}
+
+.dashboard-error {
+  margin: 0 0 9px;
+  padding: 7px 9px;
+  background: #f7eded;
+  border: 1px solid #dfc4c4;
+  border-radius: 5px;
+  font-size: 12.5px;
+}
+
+.dashboard-error span,
+.dashboard-error code {
+  display: block;
+}
+
+.inspection-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 9px;
+  color: var(--neutral);
+  font-size: 12.5px;
+}
+
+.connection-list {
+  display: grid;
+  gap: 8px;
+}
+
+.connection-card {
+  padding: 9px 11px 10px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 6px;
+}
+
+.connection-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.connection-card h3,
+.empty-connections h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.state-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.connection-card dl {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.connection-card dl > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.connection-card dt,
+.connection-card dd {
+  color: var(--neutral);
+  font-size: 12px;
+}
+
+.connection-card dt {
+  font-weight: 550;
+}
+
+.connection-card dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.state-connected {
+  border-left-color: #5c8a72;
+}
+
+.state-connected .state-badge {
+  color: #365d48;
+  background: #e2eee7;
+}
+
+.state-targetMissing,
+.state-notConfigured {
+  border-left-color: var(--primary);
+}
+
+.state-targetMissing .state-badge,
+.state-notConfigured .state-badge {
+  color: #405f84;
+  background: #e6edf5;
+}
+
+.state-targetOccupied,
+.state-targetMismatch,
+.state-sourceMissing {
+  border-left-color: #c18b4f;
+}
+
+.state-targetOccupied .state-badge,
+.state-targetMismatch .state-badge,
+.state-sourceMissing .state-badge {
+  color: #765126;
+  background: #f4eadc;
+}
+
+.state-inspectionFailed {
+  border-left-color: #b56565;
+}
+
+.state-inspectionFailed .state-badge {
+  color: #7d3e3e;
+  background: #f4e2e2;
+}
+
+.empty-connections {
+  padding: 28px 18px;
+  text-align: center;
+  background: var(--base-100);
+  border: 1px dashed var(--secondary-border);
+  border-radius: 6px;
+}
+
+.empty-connections p {
+  margin: 5px 0 0;
+  color: var(--neutral);
+  font-size: 13px;
+}
+
 footer {
   display: flex;
   align-items: center;
@@ -373,6 +569,23 @@ footer {
   color: #8c4f4f;
 }
 
+@media (max-width: 660px) {
+  .dashboard-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .storage-heading > code {
+    max-width: none;
+  }
+
+  .dashboard-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 560px) {
   .topbar,
   footer {
@@ -391,6 +604,17 @@ footer {
   .creation-flow,
   .created-state {
     width: min(100% - 32px, 540px);
+  }
+
+  .dashboard-heading,
+  .inspection-summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   footer {

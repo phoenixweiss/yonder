@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { inspectStorage, StorageInspectionError } from './inspection.js'
 import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
+import { CONFIG_FILENAME } from '../shared/config.js'
 
 let mainWindow
 let pendingCreation
+let activeStorage
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 
 if (devUrl) {
@@ -43,6 +47,7 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = undefined
     pendingCreation = undefined
+    activeStorage = undefined
   })
 
   if (devUrl) mainWindow.loadURL(devUrl)
@@ -54,6 +59,52 @@ function isTrustedIpcEvent(event) {
 }
 
 function installStorageHandlers() {
+  ipcMain.handle('storage:choose-for-opening', async (event, language) => {
+    if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: language === 'ru' ? 'Выберите хранилище Yonder' : 'Choose a Yonder storage',
+      properties: ['openDirectory']
+    })
+    if (result.canceled || result.filePaths.length !== 1) return { status: 'cancelled' }
+
+    try {
+      const storage = await inspectStorage(result.filePaths[0], {
+        homeDirectory: app.getPath('home'),
+        systemPlatform: process.platform
+      })
+      activeStorage = { id: randomUUID(), folderPath: storage.folderPath }
+      return { status: 'opened', storageId: activeStorage.id, storage }
+    } catch (error) {
+      return {
+        status: error instanceof StorageInspectionError ? error.code : 'unavailable',
+        folderPath: result.filePaths[0],
+        configPath: join(result.filePaths[0], CONFIG_FILENAME)
+      }
+    }
+  })
+
+  ipcMain.handle('storage:recheck', async (event, storageId) => {
+    if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
+    if (typeof storageId !== 'string' || storageId !== activeStorage?.id) {
+      return { status: 'invalidSelection' }
+    }
+
+    try {
+      const storage = await inspectStorage(activeStorage.folderPath, {
+        homeDirectory: app.getPath('home'),
+        systemPlatform: process.platform
+      })
+      return { status: 'opened', storageId: activeStorage.id, storage }
+    } catch (error) {
+      return {
+        status: error instanceof StorageInspectionError ? error.code : 'unavailable',
+        folderPath: activeStorage.folderPath,
+        configPath: join(activeStorage.folderPath, CONFIG_FILENAME)
+      }
+    }
+  })
+
   ipcMain.handle('storage:choose-for-creation', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     pendingCreation = undefined

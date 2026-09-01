@@ -11,6 +11,10 @@ const view = ref('welcome')
 const noticeKey = ref('')
 const creationErrorKey = ref('')
 const busy = ref(false)
+const checking = ref(false)
+const storageId = ref('')
+const storage = ref(null)
+const inspectionError = ref({ key: '', path: '', previousResults: false })
 const creation = ref({
   selectionId: '',
   folderPath: '',
@@ -19,16 +23,92 @@ const creation = ref({
 })
 
 const nameIsValid = computed(() => isValidStorageName(creation.value.name))
+const connectedCount = computed(
+  () => storage.value?.connections.filter(({ state }) => state === 'connected').length ?? 0
+)
+const attentionCount = computed(
+  () =>
+    storage.value?.connections.filter(
+      ({ state }) => !['connected', 'notConfigured'].includes(state)
+    ).length ?? 0
+)
+
+function inspectionErrorKey(status) {
+  const keys = {
+    missingConfig: 'inspection.errors.missingConfig',
+    invalidConfig: 'inspection.errors.invalidConfig',
+    invalidSelection: 'inspection.errors.invalidSelection'
+  }
+  return keys[status] ?? 'inspection.errors.unavailable'
+}
 
 function showWelcome() {
   view.value = 'welcome'
   creationErrorKey.value = ''
+  inspectionError.value = { key: '', path: '', previousResults: false }
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
+}
+
+async function openStorage() {
+  noticeKey.value = ''
+  inspectionError.value = { key: '', path: '', previousResults: false }
+  busy.value = true
+
+  try {
+    const result = await window.yonder.chooseStorageFolderForOpening(i18next.resolvedLanguage)
+    if (result.status === 'cancelled') return
+    if (result.status === 'opened') {
+      storageId.value = result.storageId
+      storage.value = result.storage
+      view.value = 'dashboard'
+      return
+    }
+    inspectionError.value = {
+      key: inspectionErrorKey(result.status),
+      path: result.configPath ?? result.folderPath ?? '',
+      previousResults: view.value === 'dashboard'
+    }
+  } catch {
+    inspectionError.value = {
+      key: 'inspection.errors.unavailable',
+      path: '',
+      previousResults: view.value === 'dashboard'
+    }
+  } finally {
+    busy.value = false
+  }
+}
+
+async function recheckStorage() {
+  inspectionError.value = { key: '', path: '', previousResults: false }
+  checking.value = true
+
+  try {
+    const result = await window.yonder.recheckStorage(storageId.value)
+    if (result.status === 'opened') {
+      storage.value = result.storage
+      return
+    }
+    inspectionError.value = {
+      key: inspectionErrorKey(result.status),
+      path: result.configPath ?? result.folderPath ?? storage.value?.configPath ?? '',
+      previousResults: true
+    }
+  } catch {
+    inspectionError.value = {
+      key: 'inspection.errors.unavailable',
+      path: storage.value?.configPath ?? '',
+      previousResults: true
+    }
+  } finally {
+    checking.value = false
+  }
 }
 
 async function chooseFolderForCreation() {
   const startedFromWelcome = view.value === 'welcome'
   noticeKey.value = ''
+  inspectionError.value = { key: '', path: '', previousResults: false }
   creationErrorKey.value = ''
   busy.value = true
 
@@ -113,9 +193,10 @@ async function confirmCreation() {
           type="button"
           class="primary-action"
           aria-describedby="storage-hint"
-          @click="noticeKey = 'shell.openNotice'"
+          :disabled="busy"
+          @click="openStorage"
         >
-          {{ $t('shell.open') }}
+          {{ busy ? $t('inspection.opening') : $t('shell.open') }}
         </button>
         <button
           type="button"
@@ -129,8 +210,17 @@ async function confirmCreation() {
       </div>
 
       <p id="storage-hint" class="hint">{{ $t('shell.hint') }}</p>
-      <p class="notice" role="status" aria-live="polite">
-        {{ noticeKey ? $t(noticeKey) : '' }}
+      <p
+        class="notice"
+        :class="{ 'notice-error': inspectionError.key }"
+        role="status"
+        aria-live="polite"
+      >
+        <template v-if="inspectionError.key">
+          {{ $t(inspectionError.key) }}
+          <code v-if="inspectionError.path">{{ inspectionError.path }}</code>
+        </template>
+        <template v-else>{{ noticeKey ? $t(noticeKey) : '' }}</template>
       </p>
     </section>
 
@@ -202,7 +292,7 @@ async function confirmCreation() {
       </form>
     </section>
 
-    <section v-else class="created-state" aria-labelledby="created-title">
+    <section v-else-if="view === 'created'" class="created-state" aria-labelledby="created-title">
       <span class="success-mark" aria-hidden="true">✓</span>
       <h2 id="created-title">{{ $t('creation.createdTitle') }}</h2>
       <p class="intro">{{ $t('creation.createdIntro') }}</p>
@@ -213,6 +303,79 @@ async function confirmCreation() {
       <button type="button" class="secondary-action" @click="showWelcome">
         {{ $t('creation.done') }}
       </button>
+    </section>
+
+    <section v-else class="dashboard" aria-labelledby="storage-title">
+      <div class="dashboard-heading">
+        <div class="storage-heading">
+          <h2 id="storage-title">{{ storage.name }}</h2>
+          <code>{{ storage.folderPath }}</code>
+        </div>
+        <div class="dashboard-actions">
+          <button
+            type="button"
+            class="primary-action"
+            :disabled="checking || busy"
+            @click="recheckStorage"
+          >
+            {{ checking ? $t('inspection.checking') : $t('inspection.checkAgain') }}
+          </button>
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="checking || busy"
+            @click="openStorage"
+          >
+            {{ busy ? $t('inspection.opening') : $t('inspection.openAnother') }}
+          </button>
+        </div>
+      </div>
+
+      <p v-if="inspectionError.key" class="dashboard-error" role="status">
+        {{ $t(inspectionError.key) }}
+        <span v-if="inspectionError.previousResults">{{ $t('inspection.previousResults') }}</span>
+        <code v-if="inspectionError.path">{{ inspectionError.path }}</code>
+      </p>
+
+      <div class="inspection-summary" aria-live="polite">
+        <span>{{ $t('inspection.connections') }}: {{ storage.connections.length }}</span>
+        <span>{{ $t('inspection.connected') }}: {{ connectedCount }}</span>
+        <span>{{ $t('inspection.needsAttention') }}: {{ attentionCount }}</span>
+      </div>
+
+      <div v-if="storage.connections.length === 0" class="empty-connections">
+        <h3>{{ $t('inspection.emptyTitle') }}</h3>
+        <p>{{ $t('inspection.emptyText') }}</p>
+      </div>
+
+      <div v-else class="connection-list">
+        <article
+          v-for="connection in storage.connections"
+          :key="connection.id"
+          class="connection-card"
+          :class="`state-${connection.state}`"
+        >
+          <header>
+            <h3>{{ connection.name }}</h3>
+            <span class="state-badge">{{ $t(`inspection.states.${connection.state}`) }}</span>
+          </header>
+          <dl>
+            <div>
+              <dt>{{ $t('inspection.source') }}</dt>
+              <dd>
+                <code>{{ connection.sourcePath }}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>{{ $t('inspection.target') }}</dt>
+              <dd>
+                <code v-if="connection.targetPath">{{ connection.targetPath }}</code>
+                <span v-else>{{ $t('inspection.notConfiguredPath') }}</span>
+              </dd>
+            </div>
+          </dl>
+        </article>
+      </div>
     </section>
 
     <footer>

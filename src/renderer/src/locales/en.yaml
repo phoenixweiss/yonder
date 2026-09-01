@@ -4,9 +4,8 @@ shell:
   intro: Open an existing Yonder storage or prepare a new one in an ordinary folder.
   open: Open storage…
   create: Create storage…
-  hint: Creation writes only a new configuration after an explicit confirmation.
-  openNotice: Opening an existing storage will be added in the next read-only step. Nothing changed.
-  foundation: Safe configuration creation
+  hint: Opening checks connections without changing files. Creation writes only after confirmation.
+  foundation: Read-only inspection · confirmed creation
   language: Language
   systemLanguage: System default
   languageSaveFailed: Language changed for this session only. The preference could not be saved.
@@ -30,3 +29,30 @@ creation:
   createdIntro: The empty configuration is ready.
   createdEffect: No files were moved and no links were created.
   done: Done
+inspection:
+  opening: Opening…
+  checking: Checking…
+  checkAgain: Check again
+  openAnother: Open another storage…
+  connections: Connections
+  connected: Connected
+  needsAttention: Needs attention
+  source: Storage
+  target: This computer
+  notConfiguredPath: Not configured for this operating system
+  emptyTitle: No connections yet
+  emptyText: This storage has a valid configuration with an empty connection list.
+  previousResults: The previous results remain displayed.
+  states:
+    connected: Connected
+    targetMissing: Not connected
+    targetOccupied: Path occupied
+    targetMismatch: Link points elsewhere
+    sourceMissing: Storage item missing
+    notConfigured: Not configured here
+    inspectionFailed: Could not inspect
+  errors:
+    missingConfig: No yonder.yaml was found in the selected folder. Nothing changed.
+    invalidConfig: yonder.yaml is invalid or unsupported. Nothing changed.
+    invalidSelection: This storage selection has expired. Open the folder again.
+    unavailable: Yonder could not read the selected storage. Nothing changed.
