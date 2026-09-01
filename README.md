@@ -28,6 +28,13 @@ The first functional milestone stays deliberately small and read-only:
 Creating or changing `yonder.yaml`, previewing filesystem actions, creating links,
 and resolving conflicts will follow as separate, explicitly confirmed steps.
 
+## Configuration
+
+`yonder.yaml` has a strict, versioned structure. Sources are paths relative to the
+storage folder; targets are home-relative paths for macOS, Linux, or Windows.
+Unknown fields, unsafe paths, duplicate identifiers, and overlapping targets are
+rejected before any filesystem action. See the [fictional example](examples/yonder.yaml).
+
 ## Technical direction
 
 The interface is a Vue 3 application built with Vite and JavaScript ESM. Electron

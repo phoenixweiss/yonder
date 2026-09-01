@@ -1,0 +1,21 @@
+# Keep this file inside the folder containing your actual data.
+# Source paths are relative to this file. ~/ means this computer's home folder.
+# These examples are fictional and do not come from a real user environment.
+version: 1
+name: My files
+
+connections:
+  - id: templates
+    name: Document templates
+    source: Templates
+    targets:
+      macos: ~/Documents/Templates
+      linux: ~/Documents/Templates
+      windows: ~/Documents/Templates
+
+  - id: notes
+    name: Notes
+    source: Notes
+    targets:
+      macos: ~/Documents/Notes
+      linux: ~/Documents/Notes

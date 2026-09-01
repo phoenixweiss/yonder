@@ -13,6 +13,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - A secure Electron shell with a Vue 3 and Vite renderer.
 - A compact first-launch foundation with separate Open and Create storage actions.
 - Synchronized English and Russian interface resources with English fallback.
+- A strict, versioned `yonder.yaml` contract with safe cross-platform path validation.
 
 ### Changed
 
