@@ -72,7 +72,7 @@ connectionDraft:
   linkName: Link name
   resultingTarget: 'Resulting target:'
   notSelected: Not selected
-  readOnlyNote: This form and its preview are read-only. They do not edit yonder.yaml or create the symbolic link.
+  readOnlyNote: Choosing paths and reviewing the draft do not edit yonder.yaml or create the symbolic link. Writing requires a separate final confirmation.
   review: Review connection
   checking: Checking…
   back: Back to storage
@@ -81,9 +81,19 @@ connectionDraft:
   configFile: Configuration file
   destination: Destination on this computer
   yamlEntry: Proposed YAML entry
-  previewEffect: A later, separately confirmed step would add this one entry to yonder.yaml.
-  previewUnchanged: This preview does not edit the configuration, create folders or links, or move, delete, or replace files.
-  previewNote: Preview is not write authority. Return to the draft to make changes or back to the storage to leave it unchanged.
+  previewEffect: Preparing the update rereads the source, destination folder, and configuration before enabling the final confirmation.
+  previewUnchanged: The confirmed update changes only yonder.yaml by adding this entry. It does not create folders or links, or move, delete, or replace other files.
+  previewNote: Preparation is not write authority. A one-time final confirmation is required before yonder.yaml changes.
+  prepareWrite: Prepare configuration update
+  preparingWrite: Checking configuration…
+  confirmTitle: Ready to update yonder.yaml
+  confirmEffect: Fresh checks passed. Confirming will replace only this configuration with a validated version containing the proposed entry.
+  confirmUnchanged: No symbolic link will be created automatically. Applying the connection remains a separate action.
+  confirmWrite: Add to yonder.yaml
+  writing: Updating…
+  cancelWrite: Cancel
+  created: The connection was added to yonder.yaml. No symbolic link was created.
+  createdRefreshFailed: The connection was added to yonder.yaml, but the refreshed storage could not be displayed. Open the storage again before continuing.
   edit: Back to draft
   errors:
     invalidSelection: This draft selection has expired. Choose the source and destination folder again.
@@ -101,7 +111,12 @@ connectionDraft:
     targetOverlapsStorage: The destination must not contain or be inside the active storage folder.
     tooManyConnections: This storage already has the maximum supported number of connections.
     invalidDraft: The proposed connection is not valid for yonder.yaml.
-    unavailable: Yonder could not prepare this read-only preview. Nothing changed.
+    selectionExpired: This prepared update has expired. Run the fresh checks again.
+    operationBusy: Another configuration check is still running. Wait for it to finish.
+    stateChanged: The source, destination folder, or yonder.yaml changed during the checks. Nothing was written; review the current storage and try again.
+    writeFailed: Yonder could not replace yonder.yaml. The previous configuration remains in place.
+    writeUncertain: Yonder could not prove which yonder.yaml version is on disk. Do not retry blindly; reopen the storage and inspect the configuration first.
+    unavailable: Yonder could not prepare or complete this configuration update. Nothing else was changed.
 preview:
   title: Connection preview
   intro: Review the proposed change for “{{name}}”.

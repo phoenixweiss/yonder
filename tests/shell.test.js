@@ -109,7 +109,7 @@ test('connection apply exposes only selection ids and one-time confirmation toke
   assert.match(mainSource, /requestSingleInstanceLock/)
 })
 
-test('connection authoring stops at a read-only main-process preview', async () => {
+test('connection authoring separates preview from a one-time configuration confirmation', async () => {
   const [appSource, preloadSource, mainSource] = await Promise.all([
     readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
     readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8'),
@@ -119,11 +119,18 @@ test('connection authoring stops at a read-only main-process preview', async () 
   assert.match(appSource, /showConnectionDraft/)
   assert.match(appSource, /connectionDraft\.readOnlyNote/)
   assert.match(appSource, /connectionDraft\.previewNote/)
+  assert.match(appSource, /prepareConnectionDraftWrite\(/)
+  assert.match(appSource, /confirmConnectionDraftWrite\(token\)/)
   assert.match(preloadSource, /connection:choose-draft-source/)
   assert.match(preloadSource, /connection:choose-draft-target-parent/)
   assert.match(preloadSource, /connection:preview-draft/)
-  assert.doesNotMatch(preloadSource, /connection:(?:create|confirm|write)-draft/)
+  assert.match(preloadSource, /connection:prepare-draft-write/)
+  assert.match(preloadSource, /connection:confirm-draft-write/)
+  assert.match(preloadSource, /connection:cancel-draft-write/)
+  assert.doesNotMatch(preloadSource, /writeFile|rename|sourcePath|targetPath/)
   assert.match(mainSource, /draftController\.selectSource\(draftStorage\.folderPath/)
   assert.match(mainSource, /draftController\.selectTargetParent/)
   assert.match(mainSource, /draftController\.preview\(draftStorage\.folderPath/)
+  assert.match(mainSource, /authoringController\.prepare\(draftStorage\.folderPath/)
+  assert.match(mainSource, /authoringController\.confirm\(token\)/)
 })

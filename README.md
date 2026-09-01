@@ -37,11 +37,13 @@ before a small native macOS helper creates exactly one symbolic link. Yonder doe
 not create parent folders, replace conflicts, move files, edit `yonder.yaml`, or
 apply several connections at once.
 
-An opened storage also offers a read-only draft for one new connection. The user
+An opened storage also offers a guarded draft for one new connection. The user
 chooses an existing source inside the storage and an existing destination folder
 inside the macOS home folder, then reviews the exact paths and proposed YAML entry.
-This draft flow has no configuration-write command: it does not edit `yonder.yaml`,
-create the link, or change any other file.
+Preparing the update rereads and validates those paths and `yonder.yaml`; a separate
+one-time confirmation then atomically replaces only the configuration with the new
+entry appended. A changed configuration or selection blocks the write. This action
+does not create the symbolic link, create folders, or change source and target files.
 
 ## Configuration
 

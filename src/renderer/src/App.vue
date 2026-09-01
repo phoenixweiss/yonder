@@ -32,6 +32,8 @@ const connectionDraftErrorKey = ref('')
 const connectionDraftIdEdited = ref(false)
 const connectionDraftLinkNameEdited = ref(false)
 const connectionDraftPreview = ref(null)
+const connectionDraftPreparation = ref(null)
+const connectionDraftWriteErrorKey = ref('')
 const inspectionError = ref({ key: '', path: '', previousResults: false })
 const creation = ref({
   selectionId: '',
@@ -82,6 +84,8 @@ function resetConnectionDraft() {
   connectionDraftIdEdited.value = false
   connectionDraftLinkNameEdited.value = false
   connectionDraftPreview.value = null
+  connectionDraftPreparation.value = null
+  connectionDraftWriteErrorKey.value = ''
 }
 
 function inspectionErrorKey(status) {
@@ -158,7 +162,12 @@ function connectionDraftError(status) {
     targetOverlap: 'connectionDraft.errors.targetOverlap',
     targetOverlapsStorage: 'connectionDraft.errors.targetOverlapsStorage',
     tooManyConnections: 'connectionDraft.errors.tooManyConnections',
-    invalidDraft: 'connectionDraft.errors.invalidDraft'
+    invalidDraft: 'connectionDraft.errors.invalidDraft',
+    selectionExpired: 'connectionDraft.errors.selectionExpired',
+    operationBusy: 'connectionDraft.errors.operationBusy',
+    stateChanged: 'connectionDraft.errors.stateChanged',
+    writeFailed: 'connectionDraft.errors.writeFailed',
+    writeUncertain: 'connectionDraft.errors.writeUncertain'
   }
   return keys[status] ?? 'connectionDraft.errors.unavailable'
 }
@@ -260,6 +269,8 @@ async function previewConnectionDraft() {
       return
     }
     connectionDraftPreview.value = result
+    connectionDraftPreparation.value = null
+    connectionDraftWriteErrorKey.value = ''
     view.value = 'connection-draft-preview'
   } catch {
     connectionDraftErrorKey.value = 'connectionDraft.errors.unavailable'
@@ -268,13 +279,101 @@ async function previewConnectionDraft() {
   }
 }
 
-function editConnectionDraft() {
+async function prepareConnectionDraftWrite() {
+  if (!connectionDraftPreview.value || connectionDraftBusy.value) return
+  connectionDraftWriteErrorKey.value = ''
+  connectionDraftBusy.value = true
+  try {
+    const result = await window.yonder.prepareConnectionDraftWrite(
+      storageId.value,
+      connectionDraft.value.sourceSelectionId,
+      connectionDraft.value.targetSelectionId,
+      connectionDraft.value.name,
+      connectionDraft.value.id,
+      connectionDraft.value.linkName
+    )
+    if (result.status !== 'ready') {
+      connectionDraftWriteErrorKey.value = connectionDraftError(result.status)
+      return
+    }
+    connectionDraftPreparation.value = result
+  } catch {
+    connectionDraftWriteErrorKey.value = 'connectionDraft.errors.unavailable'
+  } finally {
+    connectionDraftBusy.value = false
+  }
+}
+
+async function confirmConnectionDraftWrite() {
+  if (!connectionDraftPreparation.value || connectionDraftBusy.value) return
+  const token = connectionDraftPreparation.value.token
+  connectionDraftWriteErrorKey.value = ''
+  connectionDraftBusy.value = true
+  try {
+    const result = await window.yonder.confirmConnectionDraftWrite(token)
+    connectionDraftPreparation.value = null
+    if (result.status === 'created') {
+      if (result.storageId && result.storage) {
+        storageId.value = result.storageId
+        storage.value = result.storage
+        dashboardNoticeKey.value = 'connectionDraft.created'
+      } else {
+        dashboardNoticeKey.value = 'connectionDraft.createdRefreshFailed'
+      }
+      resetConnectionDraft()
+      view.value = 'dashboard'
+      return
+    }
+    if (result.status === 'writeUncertain') {
+      inspectionError.value = {
+        key: 'connectionDraft.errors.writeUncertain',
+        path: storage.value?.configPath ?? '',
+        previousResults: true
+      }
+      resetConnectionDraft()
+      view.value = 'dashboard'
+      return
+    }
+    connectionDraftWriteErrorKey.value = connectionDraftError(result.status)
+  } catch {
+    connectionDraftPreparation.value = null
+    connectionDraftWriteErrorKey.value = 'connectionDraft.errors.unavailable'
+  } finally {
+    connectionDraftBusy.value = false
+  }
+}
+
+async function cancelConnectionDraftPreparation() {
+  if (!connectionDraftPreparation.value) return true
+  const token = connectionDraftPreparation.value.token
+  connectionDraftWriteErrorKey.value = ''
+  connectionDraftBusy.value = true
+  try {
+    const result = await window.yonder.cancelConnectionDraftWrite(token)
+    if (!['cancelled', 'selectionExpired', 'invalidSelection'].includes(result.status)) {
+      connectionDraftWriteErrorKey.value = connectionDraftError(result.status)
+      return false
+    }
+    connectionDraftPreparation.value = null
+    return true
+  } catch {
+    connectionDraftWriteErrorKey.value = 'connectionDraft.errors.unavailable'
+    return false
+  } finally {
+    connectionDraftBusy.value = false
+  }
+}
+
+async function editConnectionDraft() {
+  if (!(await cancelConnectionDraftPreparation())) return
   connectionDraftPreview.value = null
   connectionDraftErrorKey.value = ''
+  connectionDraftWriteErrorKey.value = ''
   view.value = 'connection-draft'
 }
 
-function closeConnectionDraft() {
+async function closeConnectionDraft() {
+  if (!(await cancelConnectionDraftPreparation())) return
   resetConnectionDraft()
   view.value = 'dashboard'
 }
@@ -793,14 +892,70 @@ async function confirmCreation() {
       <p class="preview-unchanged">{{ $t('connectionDraft.previewUnchanged') }}</p>
       <p class="preview-note">{{ $t('connectionDraft.previewNote') }}</p>
 
-      <div class="flow-actions">
-        <button type="button" class="primary-action" @click="editConnectionDraft">
-          {{ $t('connectionDraft.edit') }}
+      <p v-if="connectionDraftWriteErrorKey" class="flow-error" role="alert">
+        {{ $t(connectionDraftWriteErrorKey) }}
+      </p>
+
+      <div v-if="connectionDraftPreparation" class="draft-write-confirmation">
+        <h3>{{ $t('connectionDraft.confirmTitle') }}</h3>
+        <p>{{ $t('connectionDraft.confirmEffect') }}</p>
+        <code>{{ connectionDraftPreparation.configPath }}</code>
+        <p>{{ $t('connectionDraft.confirmUnchanged') }}</p>
+      </div>
+
+      <div v-if="connectionDraftPreparation" class="flow-actions">
+        <button
+          type="button"
+          class="primary-action"
+          :disabled="connectionDraftBusy"
+          @click="confirmConnectionDraftWrite"
+        >
+          {{
+            connectionDraftBusy ? $t('connectionDraft.writing') : $t('connectionDraft.confirmWrite')
+          }}
         </button>
-        <button type="button" class="secondary-action" @click="closeConnectionDraft">
-          {{ $t('connectionDraft.back') }}
+        <button
+          type="button"
+          class="secondary-action"
+          :disabled="connectionDraftBusy"
+          @click="cancelConnectionDraftPreparation"
+        >
+          {{ $t('connectionDraft.cancelWrite') }}
         </button>
       </div>
+
+      <template v-else>
+        <button
+          type="button"
+          class="primary-action draft-prepare-action"
+          :disabled="connectionDraftBusy"
+          @click="prepareConnectionDraftWrite"
+        >
+          {{
+            connectionDraftBusy
+              ? $t('connectionDraft.preparingWrite')
+              : $t('connectionDraft.prepareWrite')
+          }}
+        </button>
+        <div class="flow-actions">
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="connectionDraftBusy"
+            @click="editConnectionDraft"
+          >
+            {{ $t('connectionDraft.edit') }}
+          </button>
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="connectionDraftBusy"
+            @click="closeConnectionDraft"
+          >
+            {{ $t('connectionDraft.back') }}
+          </button>
+        </div>
+      </template>
     </section>
 
     <section v-else-if="view === 'dashboard'" class="dashboard" aria-labelledby="storage-title">

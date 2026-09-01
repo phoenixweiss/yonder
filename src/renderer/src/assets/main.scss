@@ -466,6 +466,41 @@ code {
   white-space: pre-wrap;
 }
 
+.draft-prepare-action {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.draft-write-confirmation {
+  margin-top: 9px;
+  padding: 9px 11px;
+  background: #e2eee7;
+  border: 1px solid #b9d3c4;
+  border-radius: 5px;
+}
+
+.draft-write-confirmation h3,
+.draft-write-confirmation p {
+  margin: 0;
+}
+
+.draft-write-confirmation h3 {
+  color: #365d48;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.draft-write-confirmation p,
+.draft-write-confirmation code {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.draft-write-confirmation code {
+  color: var(--content);
+}
+
 .flow-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

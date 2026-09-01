@@ -4,6 +4,10 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { openApplyJournal } from './apply-journal.js'
 import { ConnectionApplyError, createConnectionApplyController } from './connection-apply.js'
+import {
+  ConnectionAuthoringError,
+  createConnectionAuthoringController
+} from './connection-authoring.js'
 import { ConnectionDraftError, createConnectionDraftController } from './connection-draft.js'
 import { inspectStorage, StorageInspectionError } from './inspection.js'
 import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
@@ -14,7 +18,9 @@ let pendingCreation
 let activeStorage
 let applyController
 let draftController
+let authoringController
 let pendingApplyStorageId = ''
+let pendingDraftStorageId = ''
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 const nativeHelperPath = fileURLToPath(
   new URL('../../build/native/yonder-link-helper', import.meta.url)
@@ -60,7 +66,9 @@ function createWindow() {
   mainWindow.on('closed', () => {
     applyController?.clear()
     draftController?.clear()
+    authoringController?.clear()
     pendingApplyStorageId = ''
+    pendingDraftStorageId = ''
     mainWindow = undefined
     pendingCreation = undefined
     activeStorage = undefined
@@ -80,7 +88,14 @@ async function clearPendingApply() {
 }
 
 function clearPendingDraft() {
+  pendingDraftStorageId = ''
+  authoringController?.clear()
   draftController?.clear()
+}
+
+function clearPendingAuthoring() {
+  pendingDraftStorageId = ''
+  authoringController?.clear()
 }
 
 function installStorageHandlers() {
@@ -210,6 +225,7 @@ function installStorageHandlers() {
 
   ipcMain.handle('connection:choose-draft-source', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
+    clearPendingAuthoring()
     if (
       !request ||
       Object.keys(request).length !== 2 ||
@@ -242,6 +258,7 @@ function installStorageHandlers() {
 
   ipcMain.handle('connection:choose-draft-target-parent', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
+    clearPendingAuthoring()
     if (
       !request ||
       Object.keys(request).length !== 2 ||
@@ -274,6 +291,7 @@ function installStorageHandlers() {
 
   ipcMain.handle('connection:preview-draft', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
+    clearPendingAuthoring()
     if (
       !request ||
       Object.keys(request).length !== 6 ||
@@ -296,6 +314,82 @@ function installStorageHandlers() {
       return result
     } catch (error) {
       return { status: error instanceof ConnectionDraftError ? error.code : 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('connection:prepare-draft-write', async (event, request) => {
+    if (!isTrustedIpcEvent(event) || !authoringController) return { status: 'unavailable' }
+    if (
+      !request ||
+      Object.keys(request).length !== 6 ||
+      typeof request.storageId !== 'string' ||
+      request.storageId !== activeStorage?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    const draftStorage = { ...activeStorage }
+    try {
+      const result = await authoringController.prepare(draftStorage.folderPath, {
+        sourceSelectionId: request.sourceSelectionId,
+        targetSelectionId: request.targetSelectionId,
+        name: request.name,
+        id: request.id,
+        linkName: request.linkName
+      })
+      if (activeStorage?.id !== draftStorage.id) {
+        clearPendingAuthoring()
+        return { status: 'invalidSelection' }
+      }
+      pendingDraftStorageId = draftStorage.id
+      return result
+    } catch (error) {
+      pendingDraftStorageId = ''
+      return {
+        status: error instanceof ConnectionAuthoringError ? error.code : 'unavailable'
+      }
+    }
+  })
+
+  ipcMain.handle('connection:confirm-draft-write', async (event, token) => {
+    if (!isTrustedIpcEvent(event) || !authoringController) return { status: 'unavailable' }
+    if (!activeStorage || pendingDraftStorageId !== activeStorage.id) {
+      return { status: 'invalidSelection' }
+    }
+
+    const draftStorage = { ...activeStorage }
+    pendingDraftStorageId = ''
+    try {
+      const result = await authoringController.confirm(token)
+      draftController?.clear()
+      if (activeStorage?.id !== draftStorage.id || result.connectionId === undefined) {
+        return { status: 'created', refreshFailed: true }
+      }
+      try {
+        const storage = await inspectStorage(draftStorage.folderPath, {
+          homeDirectory: app.getPath('home'),
+          systemPlatform: process.platform
+        })
+        return { status: 'created', storageId: draftStorage.id, storage }
+      } catch {
+        return { status: 'created', refreshFailed: true }
+      }
+    } catch (error) {
+      return {
+        status: error instanceof ConnectionAuthoringError ? error.code : 'unavailable'
+      }
+    }
+  })
+
+  ipcMain.handle('connection:cancel-draft-write', async (event, token) => {
+    if (!isTrustedIpcEvent(event) || !authoringController) return { status: 'unavailable' }
+    pendingDraftStorageId = ''
+    try {
+      return await authoringController.cancel(token)
+    } catch (error) {
+      return {
+        status: error instanceof ConnectionAuthoringError ? error.code : 'unavailable'
+      }
     }
   })
 
@@ -377,6 +471,9 @@ app.whenReady().then(async () => {
   if (!ownsSingleInstance) return
   draftController = createConnectionDraftController({
     homeDirectory: app.getPath('home')
+  })
+  authoringController = createConnectionAuthoringController({
+    previewDraft: (storagePath, request) => draftController.preview(storagePath, request)
   })
   try {
     const journal = await openApplyJournal(join(app.getPath('userData'), 'operation-journal'))
