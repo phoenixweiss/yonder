@@ -20,6 +20,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - A display-only single-connection preview with explicit blocking reasons that never serves as apply authority.
 - A separately confirmed single-connection Apply flow with fresh main-process checks,
   an anchored native macOS helper, and an append-only uncertain-outcome journal.
+- A read-only new-connection draft with guarded source and destination selection,
+  exact paths, and a proposed YAML entry without a configuration-write command.
 
 ### Changed
 

@@ -147,7 +147,11 @@ button:disabled {
 .dashboard-actions button,
 .connection-preview-line button,
 .connection-preview > button,
-.created-state > button {
+.created-state > button,
+.draft-picker button,
+.empty-connections button,
+.connection-list-actions button,
+.connection-draft-preview button {
   min-height: 40px;
   padding: 8px 12px;
   border-radius: 5px;
@@ -225,7 +229,9 @@ footer {
 }
 
 .creation-flow,
-.created-state {
+.created-state,
+.connection-draft-flow,
+.connection-draft-preview {
   align-self: center;
   justify-self: center;
   width: min(100% - 48px, 540px);
@@ -240,15 +246,26 @@ footer {
   padding-bottom: 8px;
 }
 
+.connection-draft-flow,
+.connection-draft-preview {
+  width: min(100% - 48px, 620px);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .creation-flow h2,
-.created-state h2 {
+.created-state h2,
+.connection-draft-flow h2,
+.connection-draft-preview h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 550;
   letter-spacing: -0.4px;
 }
 
-.creation-flow > .intro {
+.creation-flow > .intro,
+.connection-draft-flow > .intro,
+.connection-draft-preview > .intro {
   margin: 3px 0 10px;
 }
 
@@ -269,7 +286,11 @@ footer {
 }
 
 .creation-preview dt,
-.creation-flow label {
+.creation-flow label,
+.connection-draft-flow label,
+.draft-picker span,
+.draft-preview-paths dt,
+.draft-yaml-preview > span {
   color: var(--neutral);
   font-size: 12.5px;
   font-weight: 550;
@@ -286,15 +307,22 @@ code {
   overflow-wrap: anywhere;
 }
 
-.creation-flow form {
+.creation-flow form,
+.connection-draft-flow form {
   display: grid;
 }
 
-.creation-flow label {
+.creation-flow label,
+.connection-draft-flow label {
   margin-bottom: 5px;
 }
 
-.creation-flow input[type='text'] {
+.connection-draft-flow form > label:not(:first-child) {
+  margin-top: 7px;
+}
+
+.creation-flow input[type='text'],
+.connection-draft-flow input[type='text'] {
   width: 100%;
   min-height: 39px;
   padding: 7px 10px;
@@ -305,7 +333,8 @@ code {
   font: inherit;
 }
 
-.creation-flow input:focus-visible {
+.creation-flow input:focus-visible,
+.connection-draft-flow input:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
@@ -342,6 +371,99 @@ code {
   margin: 7px 0 0;
   color: #8c4f4f;
   font-size: 12.5px;
+}
+
+.field-hint,
+.draft-read-only-note {
+  margin: 4px 0 8px;
+  color: var(--neutral);
+  font-size: 12px;
+}
+
+.field-hint code {
+  margin-left: 4px;
+}
+
+.draft-read-only-note {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  background: #e6edf5;
+  border-radius: 5px;
+}
+
+.draft-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 9px;
+  padding: 8px 10px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.draft-picker > div {
+  min-width: 0;
+}
+
+.draft-picker span,
+.draft-picker strong,
+.draft-picker code {
+  display: block;
+}
+
+.draft-picker strong {
+  margin-top: 1px;
+  font-size: 13px;
+}
+
+.draft-picker code {
+  margin-top: 2px;
+  color: var(--neutral);
+}
+
+.draft-picker button,
+.connection-list-actions button,
+.empty-connections button {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.draft-preview-paths {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 9px;
+  padding: 9px 11px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.draft-preview-paths > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.draft-preview-paths dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.draft-yaml-preview {
+  padding: 9px 11px;
+  background: #ffffff;
+  border: 1px solid var(--secondary-border);
+  border-radius: 5px;
+}
+
+.draft-yaml-preview pre {
+  max-height: 150px;
+  margin: 5px 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 .flow-actions {
@@ -453,6 +575,11 @@ code {
 .connection-list {
   display: grid;
   gap: 8px;
+}
+
+.connection-list-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .connection-card {
@@ -590,6 +717,10 @@ code {
   margin: 5px 0 0;
   color: var(--neutral);
   font-size: 13px;
+}
+
+.empty-connections button {
+  margin-top: 13px;
 }
 
 .connection-preview {
@@ -782,8 +913,15 @@ footer {
 
   .creation-flow,
   .created-state,
-  .connection-preview {
+  .connection-preview,
+  .connection-draft-flow,
+  .connection-draft-preview {
     width: min(100% - 32px, 540px);
+  }
+
+  .draft-picker,
+  .draft-preview-paths > div {
+    grid-template-columns: 1fr;
   }
 
   .dashboard-heading,

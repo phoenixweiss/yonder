@@ -1,6 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { isValidStorageName } from '../../shared/config.js'
+import {
+  isValidConnectionId,
+  isValidLinkName,
+  suggestConnectionId
+} from '../../shared/connection-draft.js'
 import { buildConnectionPreview } from '../../shared/connection-preview.js'
 import i18next, {
   changeLanguagePreference,
@@ -22,6 +27,11 @@ const applyPreparation = ref(null)
 const applyError = ref({ key: '', recovery: null })
 const applyBusy = ref(false)
 const dashboardNoticeKey = ref('')
+const connectionDraftBusy = ref(false)
+const connectionDraftErrorKey = ref('')
+const connectionDraftIdEdited = ref(false)
+const connectionDraftLinkNameEdited = ref(false)
+const connectionDraftPreview = ref(null)
 const inspectionError = ref({ key: '', path: '', previousResults: false })
 const creation = ref({
   selectionId: '',
@@ -29,6 +39,7 @@ const creation = ref({
   configPath: '',
   name: ''
 })
+const connectionDraft = ref(emptyConnectionDraft())
 
 const nameIsValid = computed(() => isValidStorageName(creation.value.name))
 const connectedCount = computed(
@@ -40,6 +51,38 @@ const attentionCount = computed(
       ({ state }) => !['connected', 'notConfigured'].includes(state)
     ).length ?? 0
 )
+const connectionDraftIsValid = computed(() =>
+  Boolean(
+    isValidStorageName(connectionDraft.value.name) &&
+    isValidConnectionId(connectionDraft.value.id) &&
+    isValidLinkName(connectionDraft.value.linkName) &&
+    connectionDraft.value.sourceSelectionId &&
+    connectionDraft.value.targetSelectionId
+  )
+)
+
+function emptyConnectionDraft() {
+  return {
+    name: '',
+    id: '',
+    sourceSelectionId: '',
+    sourceRelativePath: '',
+    sourceDisplayPath: '',
+    targetSelectionId: '',
+    targetRelativePath: '',
+    targetDisplayPath: '',
+    linkName: ''
+  }
+}
+
+function resetConnectionDraft() {
+  connectionDraft.value = emptyConnectionDraft()
+  connectionDraftBusy.value = false
+  connectionDraftErrorKey.value = ''
+  connectionDraftIdEdited.value = false
+  connectionDraftLinkNameEdited.value = false
+  connectionDraftPreview.value = null
+}
 
 function inspectionErrorKey(status) {
   const keys = {
@@ -60,6 +103,7 @@ function showWelcome() {
   applyPreparation.value = null
   applyError.value = { key: '', recovery: null }
   dashboardNoticeKey.value = ''
+  resetConnectionDraft()
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
 }
 
@@ -78,6 +122,7 @@ async function openStorage() {
       selectedPreview.value = null
       applyPreparation.value = null
       applyError.value = { key: '', recovery: null }
+      resetConnectionDraft()
       view.value = 'dashboard'
       return
     }
@@ -95,6 +140,143 @@ async function openStorage() {
   } finally {
     busy.value = false
   }
+}
+
+function connectionDraftError(status) {
+  const keys = {
+    invalidSelection: 'connectionDraft.errors.invalidSelection',
+    unsupportedPlatform: 'connectionDraft.errors.unsupportedPlatform',
+    sourceOutsideStorage: 'connectionDraft.errors.sourceOutsideStorage',
+    sourceUnsafe: 'connectionDraft.errors.sourceUnsafe',
+    sourceUnsupported: 'connectionDraft.errors.sourceUnsupported',
+    targetOutsideHome: 'connectionDraft.errors.targetOutsideHome',
+    targetParentUnsafe: 'connectionDraft.errors.targetParentUnsafe',
+    invalidName: 'connectionDraft.errors.invalidName',
+    invalidId: 'connectionDraft.errors.invalidId',
+    duplicateId: 'connectionDraft.errors.duplicateId',
+    invalidLinkName: 'connectionDraft.errors.invalidLinkName',
+    targetOverlap: 'connectionDraft.errors.targetOverlap',
+    targetOverlapsStorage: 'connectionDraft.errors.targetOverlapsStorage',
+    tooManyConnections: 'connectionDraft.errors.tooManyConnections',
+    invalidDraft: 'connectionDraft.errors.invalidDraft'
+  }
+  return keys[status] ?? 'connectionDraft.errors.unavailable'
+}
+
+function showConnectionDraft() {
+  resetConnectionDraft()
+  connectionDraft.value.id = suggestConnectionId(
+    '',
+    storage.value.connections.map(({ id }) => id)
+  )
+  view.value = 'connection-draft'
+}
+
+function updateConnectionDraftName() {
+  connectionDraftErrorKey.value = ''
+  if (connectionDraftIdEdited.value) return
+  connectionDraft.value.id = suggestConnectionId(
+    connectionDraft.value.name,
+    storage.value.connections.map(({ id }) => id)
+  )
+}
+
+function editConnectionDraftId() {
+  connectionDraftIdEdited.value = true
+  connectionDraftErrorKey.value = ''
+}
+
+function editConnectionDraftLinkName() {
+  connectionDraftLinkNameEdited.value = true
+  connectionDraftErrorKey.value = ''
+}
+
+async function chooseConnectionDraftSource() {
+  if (connectionDraftBusy.value) return
+  connectionDraftErrorKey.value = ''
+  connectionDraftBusy.value = true
+  try {
+    const result = await window.yonder.chooseConnectionDraftSource(
+      storageId.value,
+      i18next.resolvedLanguage
+    )
+    if (result.status === 'cancelled') return
+    if (result.status !== 'ready') {
+      connectionDraftErrorKey.value = connectionDraftError(result.status)
+      return
+    }
+    connectionDraft.value.sourceSelectionId = result.selectionId
+    connectionDraft.value.sourceRelativePath = result.relativePath
+    connectionDraft.value.sourceDisplayPath = result.displayPath
+    if (!connectionDraftLinkNameEdited.value) {
+      connectionDraft.value.linkName = result.defaultLinkName
+    }
+  } catch {
+    connectionDraftErrorKey.value = 'connectionDraft.errors.unavailable'
+  } finally {
+    connectionDraftBusy.value = false
+  }
+}
+
+async function chooseConnectionDraftTargetParent() {
+  if (connectionDraftBusy.value) return
+  connectionDraftErrorKey.value = ''
+  connectionDraftBusy.value = true
+  try {
+    const result = await window.yonder.chooseConnectionDraftTargetParent(
+      storageId.value,
+      i18next.resolvedLanguage
+    )
+    if (result.status === 'cancelled') return
+    if (result.status !== 'ready') {
+      connectionDraftErrorKey.value = connectionDraftError(result.status)
+      return
+    }
+    connectionDraft.value.targetSelectionId = result.selectionId
+    connectionDraft.value.targetRelativePath = result.relativePath
+    connectionDraft.value.targetDisplayPath = result.displayPath
+  } catch {
+    connectionDraftErrorKey.value = 'connectionDraft.errors.unavailable'
+  } finally {
+    connectionDraftBusy.value = false
+  }
+}
+
+async function previewConnectionDraft() {
+  if (!connectionDraftIsValid.value || connectionDraftBusy.value) return
+  connectionDraftErrorKey.value = ''
+  connectionDraftBusy.value = true
+  try {
+    const result = await window.yonder.previewConnectionDraft(
+      storageId.value,
+      connectionDraft.value.sourceSelectionId,
+      connectionDraft.value.targetSelectionId,
+      connectionDraft.value.name,
+      connectionDraft.value.id,
+      connectionDraft.value.linkName
+    )
+    if (result.status !== 'ready') {
+      connectionDraftErrorKey.value = connectionDraftError(result.status)
+      return
+    }
+    connectionDraftPreview.value = result
+    view.value = 'connection-draft-preview'
+  } catch {
+    connectionDraftErrorKey.value = 'connectionDraft.errors.unavailable'
+  } finally {
+    connectionDraftBusy.value = false
+  }
+}
+
+function editConnectionDraft() {
+  connectionDraftPreview.value = null
+  connectionDraftErrorKey.value = ''
+  view.value = 'connection-draft'
+}
+
+function closeConnectionDraft() {
+  resetConnectionDraft()
+  view.value = 'dashboard'
 }
 
 function connectionPreview(connection) {
@@ -462,6 +644,165 @@ async function confirmCreation() {
       </button>
     </section>
 
+    <section
+      v-else-if="view === 'connection-draft'"
+      class="connection-draft-flow"
+      aria-labelledby="connection-draft-title"
+    >
+      <h2 id="connection-draft-title">{{ $t('connectionDraft.title') }}</h2>
+      <p class="intro">{{ $t('connectionDraft.intro') }}</p>
+
+      <form @submit.prevent="previewConnectionDraft">
+        <label for="connection-name">{{ $t('connectionDraft.name') }}</label>
+        <input
+          id="connection-name"
+          v-model="connectionDraft.name"
+          type="text"
+          maxlength="240"
+          :disabled="connectionDraftBusy"
+          @input="updateConnectionDraftName"
+        />
+
+        <label for="connection-id">{{ $t('connectionDraft.id') }}</label>
+        <input
+          id="connection-id"
+          v-model="connectionDraft.id"
+          type="text"
+          maxlength="64"
+          spellcheck="false"
+          :disabled="connectionDraftBusy"
+          @input="editConnectionDraftId"
+        />
+        <p class="field-hint">{{ $t('connectionDraft.idHint') }}</p>
+
+        <div class="draft-picker">
+          <div>
+            <span>{{ $t('connectionDraft.source') }}</span>
+            <strong>{{
+              connectionDraft.sourceRelativePath || $t('connectionDraft.notSelected')
+            }}</strong>
+            <code v-if="connectionDraft.sourceDisplayPath">
+              {{ connectionDraft.sourceDisplayPath }}
+            </code>
+          </div>
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="connectionDraftBusy"
+            @click="chooseConnectionDraftSource"
+          >
+            {{ $t('connectionDraft.chooseSource') }}
+          </button>
+        </div>
+
+        <div class="draft-picker">
+          <div>
+            <span>{{ $t('connectionDraft.targetParent') }}</span>
+            <strong>{{
+              connectionDraft.targetRelativePath || $t('connectionDraft.notSelected')
+            }}</strong>
+            <code v-if="connectionDraft.targetDisplayPath">
+              {{ connectionDraft.targetDisplayPath }}
+            </code>
+          </div>
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="connectionDraftBusy"
+            @click="chooseConnectionDraftTargetParent"
+          >
+            {{ $t('connectionDraft.chooseTargetParent') }}
+          </button>
+        </div>
+
+        <label for="connection-link-name">{{ $t('connectionDraft.linkName') }}</label>
+        <input
+          id="connection-link-name"
+          v-model="connectionDraft.linkName"
+          type="text"
+          maxlength="255"
+          :disabled="connectionDraftBusy"
+          @input="editConnectionDraftLinkName"
+        />
+        <p v-if="connectionDraft.targetRelativePath && connectionDraft.linkName" class="field-hint">
+          {{ $t('connectionDraft.resultingTarget') }}
+          <code>{{ connectionDraft.targetRelativePath }}/{{ connectionDraft.linkName }}</code>
+        </p>
+
+        <p v-if="connectionDraftErrorKey" class="flow-error" role="alert">
+          {{ $t(connectionDraftErrorKey) }}
+        </p>
+        <p class="draft-read-only-note">{{ $t('connectionDraft.readOnlyNote') }}</p>
+
+        <div class="flow-actions">
+          <button
+            type="submit"
+            class="primary-action"
+            :disabled="connectionDraftBusy || !connectionDraftIsValid"
+          >
+            {{
+              connectionDraftBusy ? $t('connectionDraft.checking') : $t('connectionDraft.review')
+            }}
+          </button>
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="connectionDraftBusy"
+            @click="closeConnectionDraft"
+          >
+            {{ $t('connectionDraft.back') }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section
+      v-else-if="view === 'connection-draft-preview'"
+      class="connection-draft-preview"
+      aria-labelledby="connection-draft-preview-title"
+    >
+      <h2 id="connection-draft-preview-title">{{ $t('connectionDraft.previewTitle') }}</h2>
+      <p class="intro">{{ $t('connectionDraft.previewIntro') }}</p>
+
+      <dl class="draft-preview-paths">
+        <div>
+          <dt>{{ $t('connectionDraft.configFile') }}</dt>
+          <dd>
+            <code>{{ connectionDraftPreview.configPath }}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ $t('connectionDraft.source') }}</dt>
+          <dd>
+            <code>{{ connectionDraftPreview.sourcePath }}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ $t('connectionDraft.destination') }}</dt>
+          <dd>
+            <code>{{ connectionDraftPreview.targetPath }}</code>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="draft-yaml-preview">
+        <span>{{ $t('connectionDraft.yamlEntry') }}</span>
+        <pre><code>{{ connectionDraftPreview.yaml }}</code></pre>
+      </div>
+      <p class="preview-effect">{{ $t('connectionDraft.previewEffect') }}</p>
+      <p class="preview-unchanged">{{ $t('connectionDraft.previewUnchanged') }}</p>
+      <p class="preview-note">{{ $t('connectionDraft.previewNote') }}</p>
+
+      <div class="flow-actions">
+        <button type="button" class="primary-action" @click="editConnectionDraft">
+          {{ $t('connectionDraft.edit') }}
+        </button>
+        <button type="button" class="secondary-action" @click="closeConnectionDraft">
+          {{ $t('connectionDraft.back') }}
+        </button>
+      </div>
+    </section>
+
     <section v-else-if="view === 'dashboard'" class="dashboard" aria-labelledby="storage-title">
       <div class="dashboard-heading">
         <div class="storage-heading">
@@ -506,9 +847,17 @@ async function confirmCreation() {
       <div v-if="storage.connections.length === 0" class="empty-connections">
         <h3>{{ $t('inspection.emptyTitle') }}</h3>
         <p>{{ $t('inspection.emptyText') }}</p>
+        <button type="button" class="primary-action" @click="showConnectionDraft">
+          {{ $t('connectionDraft.open') }}
+        </button>
       </div>
 
       <div v-else class="connection-list">
+        <div class="connection-list-actions">
+          <button type="button" class="secondary-action" @click="showConnectionDraft">
+            {{ $t('connectionDraft.open') }}
+          </button>
+        </div>
         <article
           v-for="connection in storage.connections"
           :key="connection.id"

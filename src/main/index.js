@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { openApplyJournal } from './apply-journal.js'
 import { ConnectionApplyError, createConnectionApplyController } from './connection-apply.js'
+import { ConnectionDraftError, createConnectionDraftController } from './connection-draft.js'
 import { inspectStorage, StorageInspectionError } from './inspection.js'
 import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
 import { CONFIG_FILENAME } from '../shared/config.js'
@@ -12,6 +13,7 @@ let mainWindow
 let pendingCreation
 let activeStorage
 let applyController
+let draftController
 let pendingApplyStorageId = ''
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 const nativeHelperPath = fileURLToPath(
@@ -57,6 +59,7 @@ function createWindow() {
   mainWindow.on('ready-to-show', () => mainWindow.show())
   mainWindow.on('closed', () => {
     applyController?.clear()
+    draftController?.clear()
     pendingApplyStorageId = ''
     mainWindow = undefined
     pendingCreation = undefined
@@ -76,10 +79,15 @@ async function clearPendingApply() {
   await applyController?.clear()
 }
 
+function clearPendingDraft() {
+  draftController?.clear()
+}
+
 function installStorageHandlers() {
   ipcMain.handle('storage:choose-for-opening', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    clearPendingDraft()
 
     const result = await dialog.showOpenDialog(mainWindow, {
       title: language === 'ru' ? 'Выберите хранилище Yonder' : 'Choose a Yonder storage',
@@ -106,6 +114,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:recheck', async (event, storageId) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    clearPendingDraft()
     if (typeof storageId !== 'string' || storageId !== activeStorage?.id) {
       return { status: 'invalidSelection' }
     }
@@ -128,6 +137,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:choose-for-creation', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    clearPendingDraft()
     pendingCreation = undefined
 
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -153,6 +163,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:create-config', async (event, request) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    clearPendingDraft()
     if (
       !request ||
       typeof request.selectionId !== 'string' ||
@@ -194,6 +205,97 @@ function installStorageHandlers() {
         return { status: 'configExists' }
       }
       return { status: 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('connection:choose-draft-source', async (event, request) => {
+    if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
+    if (
+      !request ||
+      Object.keys(request).length !== 2 ||
+      typeof request.storageId !== 'string' ||
+      typeof request.language !== 'string' ||
+      request.storageId !== activeStorage?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    const draftStorage = { ...activeStorage }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title:
+        request.language === 'ru'
+          ? 'Выберите источник внутри хранилища'
+          : 'Choose a source inside the storage',
+      defaultPath: draftStorage.folderPath,
+      properties: ['openFile', 'openDirectory']
+    })
+    if (result.canceled || result.filePaths.length !== 1) return { status: 'cancelled' }
+    if (activeStorage?.id !== draftStorage.id) return { status: 'invalidSelection' }
+
+    try {
+      return await draftController.selectSource(draftStorage.folderPath, result.filePaths[0])
+    } catch (error) {
+      return { status: error instanceof ConnectionDraftError ? error.code : 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('connection:choose-draft-target-parent', async (event, request) => {
+    if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
+    if (
+      !request ||
+      Object.keys(request).length !== 2 ||
+      typeof request.storageId !== 'string' ||
+      typeof request.language !== 'string' ||
+      request.storageId !== activeStorage?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    const draftStorage = { ...activeStorage }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title:
+        request.language === 'ru'
+          ? 'Выберите существующую папку назначения'
+          : 'Choose an existing destination folder',
+      defaultPath: app.getPath('home'),
+      properties: ['openDirectory']
+    })
+    if (result.canceled || result.filePaths.length !== 1) return { status: 'cancelled' }
+    if (activeStorage?.id !== draftStorage.id) return { status: 'invalidSelection' }
+
+    try {
+      return await draftController.selectTargetParent(draftStorage.folderPath, result.filePaths[0])
+    } catch (error) {
+      return { status: error instanceof ConnectionDraftError ? error.code : 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('connection:preview-draft', async (event, request) => {
+    if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
+    if (
+      !request ||
+      Object.keys(request).length !== 6 ||
+      typeof request.storageId !== 'string' ||
+      request.storageId !== activeStorage?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    const draftStorage = { ...activeStorage }
+    try {
+      const result = await draftController.preview(draftStorage.folderPath, {
+        sourceSelectionId: request.sourceSelectionId,
+        targetSelectionId: request.targetSelectionId,
+        name: request.name,
+        id: request.id,
+        linkName: request.linkName
+      })
+      if (activeStorage?.id !== draftStorage.id) return { status: 'invalidSelection' }
+      return result
+    } catch (error) {
+      return { status: error instanceof ConnectionDraftError ? error.code : 'unavailable' }
     }
   })
 
@@ -273,6 +375,9 @@ function installStorageHandlers() {
 
 app.whenReady().then(async () => {
   if (!ownsSingleInstance) return
+  draftController = createConnectionDraftController({
+    homeDirectory: app.getPath('home')
+  })
   try {
     const journal = await openApplyJournal(join(app.getPath('userData'), 'operation-journal'))
     applyController = createConnectionApplyController({

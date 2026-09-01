@@ -108,3 +108,22 @@ test('connection apply exposes only selection ids and one-time confirmation toke
   assert.match(mainSource, /applyController\.prepare\([\s\S]*?applyStorage\.folderPath/)
   assert.match(mainSource, /requestSingleInstanceLock/)
 })
+
+test('connection authoring stops at a read-only main-process preview', async () => {
+  const [appSource, preloadSource, mainSource] = await Promise.all([
+    readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
+    readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/main/index.js', import.meta.url), 'utf8')
+  ])
+
+  assert.match(appSource, /showConnectionDraft/)
+  assert.match(appSource, /connectionDraft\.readOnlyNote/)
+  assert.match(appSource, /connectionDraft\.previewNote/)
+  assert.match(preloadSource, /connection:choose-draft-source/)
+  assert.match(preloadSource, /connection:choose-draft-target-parent/)
+  assert.match(preloadSource, /connection:preview-draft/)
+  assert.doesNotMatch(preloadSource, /connection:(?:create|confirm|write)-draft/)
+  assert.match(mainSource, /draftController\.selectSource\(draftStorage\.folderPath/)
+  assert.match(mainSource, /draftController\.selectTargetParent/)
+  assert.match(mainSource, /draftController\.preview\(draftStorage\.folderPath/)
+})

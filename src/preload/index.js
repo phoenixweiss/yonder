@@ -26,6 +26,25 @@ const api = Object.freeze({
       name,
       openAfterCreation: openAfterCreation === true
     }),
+  chooseConnectionDraftSource: (storageId, language) =>
+    ipcRenderer.invoke('connection:choose-draft-source', {
+      storageId,
+      language: language === 'ru' ? 'ru' : 'en'
+    }),
+  chooseConnectionDraftTargetParent: (storageId, language) =>
+    ipcRenderer.invoke('connection:choose-draft-target-parent', {
+      storageId,
+      language: language === 'ru' ? 'ru' : 'en'
+    }),
+  previewConnectionDraft: (storageId, sourceSelectionId, targetSelectionId, name, id, linkName) =>
+    ipcRenderer.invoke('connection:preview-draft', {
+      storageId,
+      sourceSelectionId,
+      targetSelectionId,
+      name,
+      id,
+      linkName
+    }),
   prepareConnectionApply: (storageId, connectionId) =>
     ipcRenderer.invoke('connection:prepare-apply', { storageId, connectionId }),
   confirmConnectionApply: (token) => ipcRenderer.invoke('connection:confirm-apply', token),
