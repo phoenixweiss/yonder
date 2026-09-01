@@ -79,3 +79,11 @@ test('the minimal renderer has no UI framework, router or global store dependenc
     assert.equal(dependencies[dependency], undefined)
   }
 })
+
+test('opening a newly created storage is an explicit opt-in', async () => {
+  const appSource = await readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8')
+
+  assert.match(appSource, /const openAfterCreation = ref\(false\)/)
+  assert.match(appSource, /v-model="openAfterCreation"[\s\S]*?type="checkbox"/)
+  assert.match(appSource, /createStorageConfig\([\s\S]*?openAfterCreation\.value/)
+})

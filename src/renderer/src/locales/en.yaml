@@ -16,6 +16,7 @@ creation:
   configFile: New file
   name: Storage name
   effect: Yonder will create only this new yonder.yaml. It will not move files, create links, or replace anything.
+  openAfterCreation: Open this storage after creation
   confirm: Create yonder.yaml
   creating: Creating…
   selecting: Choosing…
@@ -25,6 +26,7 @@ creation:
   invalidSelection: This folder selection has expired. Choose the folder again.
   alreadyExists: This folder already contains yonder.yaml. Yonder will not replace it.
   unavailable: Yonder could not prepare or create the configuration. No other files were changed.
+  autoOpenFailed: The configuration was created, but Yonder could not open the storage automatically.
   createdTitle: Storage created
   createdIntro: The empty configuration is ready.
   createdEffect: No files were moved and no links were created.

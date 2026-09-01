@@ -16,6 +16,7 @@ creation:
   configFile: Новый файл
   name: Название хранилища
   effect: Yonder создаст только новый yonder.yaml. Приложение не будет перемещать файлы, создавать ссылки или что-либо заменять.
+  openAfterCreation: Открыть это хранилище после создания
   confirm: Создать yonder.yaml
   creating: Создание…
   selecting: Выбор…
@@ -25,6 +26,7 @@ creation:
   invalidSelection: Срок действия выбора папки истёк. Выберите её ещё раз.
   alreadyExists: В этой папке уже есть yonder.yaml. Yonder не будет его заменять.
   unavailable: Yonder не удалось подготовить или создать конфигурацию. Другие файлы не изменены.
+  autoOpenFailed: Конфигурация создана, но Yonder не удалось автоматически открыть хранилище.
   createdTitle: Хранилище создано
   createdIntro: Пустая конфигурация готова.
   createdEffect: Файлы не перемещались, ссылки не создавались.

@@ -20,8 +20,12 @@ const api = Object.freeze({
   recheckStorage: (storageId) => ipcRenderer.invoke('storage:recheck', storageId),
   chooseStorageFolderForCreation: (language) =>
     ipcRenderer.invoke('storage:choose-for-creation', language === 'ru' ? 'ru' : 'en'),
-  createStorageConfig: (selectionId, name) =>
-    ipcRenderer.invoke('storage:create-config', { selectionId, name })
+  createStorageConfig: (selectionId, name, openAfterCreation) =>
+    ipcRenderer.invoke('storage:create-config', {
+      selectionId,
+      name,
+      openAfterCreation: openAfterCreation === true
+    })
 })
 
 contextBridge.exposeInMainWorld('yonder', api)

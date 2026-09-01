@@ -10,6 +10,8 @@ import i18next, {
 const view = ref('welcome')
 const noticeKey = ref('')
 const creationErrorKey = ref('')
+const creationOpenErrorKey = ref('')
+const openAfterCreation = ref(false)
 const busy = ref(false)
 const checking = ref(false)
 const storageId = ref('')
@@ -45,6 +47,8 @@ function inspectionErrorKey(status) {
 function showWelcome() {
   view.value = 'welcome'
   creationErrorKey.value = ''
+  creationOpenErrorKey.value = ''
+  openAfterCreation.value = false
   inspectionError.value = { key: '', path: '', previousResults: false }
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
 }
@@ -116,6 +120,8 @@ async function chooseFolderForCreation() {
     const result = await window.yonder.chooseStorageFolderForCreation(i18next.resolvedLanguage)
     if (result.status === 'cancelled') return
     if (result.status === 'ready' || result.status === 'configExists') {
+      openAfterCreation.value = false
+      creationOpenErrorKey.value = ''
       creation.value = {
         selectionId: result.selectionId ?? '',
         folderPath: result.folderPath,
@@ -138,6 +144,7 @@ async function chooseFolderForCreation() {
 
 async function confirmCreation() {
   creationErrorKey.value = ''
+  creationOpenErrorKey.value = ''
   if (!nameIsValid.value) {
     creationErrorKey.value = 'creation.invalidName'
     return
@@ -147,10 +154,20 @@ async function confirmCreation() {
   try {
     const result = await window.yonder.createStorageConfig(
       creation.value.selectionId,
-      creation.value.name
+      creation.value.name,
+      openAfterCreation.value
     )
     if (result.status === 'created') {
       creation.value = { ...creation.value, ...result, selectionId: '' }
+      if (openAfterCreation.value && result.storageId && result.storage) {
+        storageId.value = result.storageId
+        storage.value = result.storage
+        view.value = 'dashboard'
+        return
+      }
+      if (openAfterCreation.value && result.openingFailed) {
+        creationOpenErrorKey.value = 'creation.autoOpenFailed'
+      }
       view.value = 'created'
       return
     }
@@ -267,6 +284,15 @@ async function confirmCreation() {
           {{ $t(creationErrorKey || 'creation.invalidName') }}
         </p>
 
+        <label class="creation-option">
+          <input
+            v-model="openAfterCreation"
+            type="checkbox"
+            :disabled="busy || !creation.selectionId"
+          />
+          <span>{{ $t('creation.openAfterCreation') }}</span>
+        </label>
+
         <div class="flow-actions">
           <button
             v-if="creation.selectionId"
@@ -300,6 +326,9 @@ async function confirmCreation() {
         <code>{{ creation.configPath }}</code>
       </p>
       <p class="creation-effect">{{ $t('creation.createdEffect') }}</p>
+      <p v-if="creationOpenErrorKey" class="flow-error" role="status">
+        {{ $t(creationOpenErrorKey) }}
+      </p>
       <button type="button" class="secondary-action" @click="showWelcome">
         {{ $t('creation.done') }}
       </button>

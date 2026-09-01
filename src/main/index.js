@@ -143,11 +143,25 @@ function installStorageHandlers() {
     try {
       const result = await createStorageConfig(pendingCreation.folderPath, request.name)
       pendingCreation = undefined
-      return {
+      activeStorage = undefined
+      const created = {
         status: 'created',
         folderPath: result.folderPath,
         configPath: result.configPath,
         name: result.name
+      }
+
+      if (request.openAfterCreation !== true) return created
+
+      try {
+        const storage = await inspectStorage(result.folderPath, {
+          homeDirectory: app.getPath('home'),
+          systemPlatform: process.platform
+        })
+        activeStorage = { id: randomUUID(), folderPath: storage.folderPath }
+        return { ...created, storageId: activeStorage.id, storage }
+      } catch {
+        return { ...created, openingFailed: true }
       }
     } catch (error) {
       if (error instanceof StorageCreationError && error.code === 'invalidName') {

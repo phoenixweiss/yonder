@@ -28,6 +28,8 @@ Yonder can open an existing storage and inspect it without changing files:
 
 Creating a new empty `yonder.yaml` is available as a separate flow: Yonder shows
 the selected folder, storage name, and exact new file before asking for confirmation.
+An unchecked-by-default option can open the new storage immediately after creation;
+this performs the same read-only inspection and does not add further writes.
 Changing a configuration, previewing filesystem actions, creating links, and
 resolving conflicts will follow as separate, explicitly confirmed steps.
 

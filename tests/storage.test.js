@@ -8,6 +8,7 @@ import {
   inspectStorageDirectory,
   StorageCreationError
 } from '../src/main/storage.js'
+import { inspectStorage } from '../src/main/inspection.js'
 import { CONFIG_FILENAME, parseConfig } from '../src/shared/config.js'
 
 async function temporaryDirectory(t) {
@@ -39,6 +40,22 @@ test('creates only a valid empty yonder.yaml after confirmation', async (t) => {
     connections: []
   })
   assert.equal(result.source, source)
+})
+
+test('a newly created storage can be opened by the read-only inspector', async (t) => {
+  const directory = await temporaryDirectory(t)
+  const home = await temporaryDirectory(t)
+  await createStorageConfig(directory, 'Open after creation')
+  const before = await readdir(directory)
+
+  const storage = await inspectStorage(directory, {
+    homeDirectory: home,
+    systemPlatform: 'darwin'
+  })
+
+  assert.equal(storage.name, 'Open after creation')
+  assert.deepEqual(storage.connections, [])
+  assert.deepEqual(await readdir(directory), before)
 })
 
 test('never replaces an existing yonder.yaml', async (t) => {
