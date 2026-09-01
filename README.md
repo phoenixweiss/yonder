@@ -43,6 +43,9 @@ When creating a storage, Yonder writes only a new `yonder.yaml` with an empty
 connection list. It uses exclusive creation and never replaces an existing file.
 Configuration reads are size-limited and strict. Rechecking refreshes the displayed
 state but never creates links, moves files, or changes the configuration.
+For a safely inspectable missing target, Yonder can show a display-only preview of
+one proposed symbolic link. The preview is not write authority, exposes no apply
+action, and clearly blocks missing or redirected parent folders and unsafe sources.
 
 ## Technical direction
 

@@ -80,11 +80,68 @@ test('inspects every connection state without changing files', async (t) => {
   assert.deepEqual(Object.keys(result.connections[0]).sort(), [
     'id',
     'name',
+    'readiness',
     'sourcePath',
     'state',
     'targetPath'
   ])
+  assert.deepEqual(result.connections.find(({ id }) => id === 'target-missing').readiness, {
+    status: 'ready'
+  })
   assert.deepEqual(after, before)
+})
+
+test('preview readiness blocks missing or redirected parents and redirected sources', async (t) => {
+  const { storage, home } = await temporaryFixture(t)
+  const connections = [
+    connection('ready', { macos: '~/.config/ready' }),
+    connection('missing-parent', { macos: '~/missing/nested' }),
+    connection('redirected-parent', { macos: '~/redirected/nested' }),
+    connection('occupied-parent', { macos: '~/ordinary-file/nested' }),
+    connection('redirected-source', { macos: '~/.config/redirected-source' })
+  ]
+  await writeConfig(storage, connections)
+  await mkdir(join(storage, 'sources'), { recursive: true })
+  for (const id of ['ready', 'missing-parent', 'redirected-parent', 'occupied-parent']) {
+    await mkdir(join(storage, 'sources', id))
+  }
+  await symlink(join(storage, 'sources', 'ready'), join(storage, 'sources', 'redirected-source'))
+  await mkdir(join(home, '.config'))
+  await symlink(join(home, '.config'), join(home, 'redirected'))
+  await writeFile(join(home, 'ordinary-file'), 'fixture')
+
+  const before = {
+    home: await readdir(home),
+    config: await readdir(join(home, '.config')),
+    sources: await readdir(join(storage, 'sources'))
+  }
+  const result = await inspectStorage(storage, {
+    homeDirectory: home,
+    systemPlatform: 'darwin'
+  })
+
+  assert.deepEqual(
+    Object.fromEntries(result.connections.map(({ id, readiness }) => [id, readiness])),
+    {
+      ready: { status: 'ready' },
+      'missing-parent': { status: 'blocked', reason: 'targetParentMissing' },
+      'redirected-parent': { status: 'blocked', reason: 'targetParentUnsafe' },
+      'occupied-parent': { status: 'blocked', reason: 'targetParentUnsafe' },
+      'redirected-source': { status: 'blocked', reason: 'sourceUnsafe' }
+    }
+  )
+  assert.equal(
+    result.connections.find(({ id }) => id === 'redirected-source').state,
+    'inspectionFailed'
+  )
+  assert.deepEqual(
+    {
+      home: await readdir(home),
+      config: await readdir(join(home, '.config')),
+      sources: await readdir(join(storage, 'sources'))
+    },
+    before
+  )
 })
 
 test('classifies missing, malformed, oversized and non-UTF-8 configurations', async (t) => {

@@ -87,3 +87,15 @@ test('opening a newly created storage is an explicit opt-in', async () => {
   assert.match(appSource, /v-model="openAfterCreation"[\s\S]*?type="checkbox"/)
   assert.match(appSource, /createStorageConfig\([\s\S]*?openAfterCreation\.value/)
 })
+
+test('connection preview adds no apply bridge or action', async () => {
+  const [appSource, preloadSource] = await Promise.all([
+    readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
+    readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8')
+  ])
+
+  assert.match(appSource, /showConnectionPreview/)
+  assert.match(appSource, /preview\.note/)
+  assert.doesNotMatch(appSource, /applyConnection|preview\.apply/)
+  assert.doesNotMatch(preloadSource, /connection:apply|applyConnection|createLink/)
+})

@@ -64,38 +64,82 @@ async function pathDetails(filePath) {
   try {
     return { status: 'available', details: await lstat(filePath) }
   } catch (error) {
-    if (error?.code === 'ENOENT') return { status: 'missing' }
+    if (['ENOENT', 'ENOTDIR'].includes(error?.code)) return { status: 'missing' }
     return { status: 'unavailable' }
   }
+}
+
+async function safePathDetails(root, parts) {
+  let currentPath = root
+  const entries = [{ path: root, final: parts.length === 0 }]
+  for (const [index, part] of parts.entries()) {
+    currentPath = join(currentPath, part)
+    entries.push({ path: currentPath, final: index === parts.length - 1 })
+  }
+
+  for (const entry of entries) {
+    const inspected = await pathDetails(entry.path)
+    if (inspected.status !== 'available') return inspected
+    if (inspected.details.isSymbolicLink()) return { status: 'redirected' }
+    if (!entry.final && !inspected.details.isDirectory()) return { status: 'notDirectory' }
+    if (entry.final) return inspected
+  }
+
+  return { status: 'unavailable' }
+}
+
+function blocked(reason) {
+  return { status: 'blocked', reason }
 }
 
 async function inspectConnection(connection, context) {
   const sourcePath = pathFromPortableRelative(context.folderPath, connection.source)
   const target = context.platform ? connection.targets[context.platform] : undefined
   const targetPath = target ? pathFromPortableRelative(context.homeDirectory, target.slice(2)) : ''
-  const result = (state) => ({
+  const result = (state, readiness = blocked(state)) => ({
     id: connection.id,
     name: connection.name,
     sourcePath,
     targetPath,
-    state
+    state,
+    readiness
   })
 
   if (!target) {
     return result('notConfigured')
   }
 
-  const source = await pathDetails(sourcePath)
+  const source = await safePathDetails(context.folderPath, connection.source.split('/'))
   if (source.status === 'missing') {
     return result('sourceMissing')
   }
   if (source.status === 'unavailable') {
-    return result('inspectionFailed')
+    return result('inspectionFailed', blocked('inspectionFailed'))
+  }
+  if (['redirected', 'notDirectory'].includes(source.status)) {
+    return result('inspectionFailed', blocked('sourceUnsafe'))
+  }
+  if (!source.details.isFile() && !source.details.isDirectory()) {
+    return result('inspectionFailed', blocked('sourceUnsupported'))
   }
 
   const destination = await pathDetails(targetPath)
   if (destination.status === 'missing') {
-    return result('targetMissing')
+    const targetParts = target.slice(2).split('/')
+    const parent = await safePathDetails(context.homeDirectory, targetParts.slice(0, -1))
+    if (parent.status === 'missing') {
+      return result('targetMissing', blocked('targetParentMissing'))
+    }
+    if (parent.status === 'unavailable') {
+      return result('targetMissing', blocked('inspectionFailed'))
+    }
+    if (['redirected', 'notDirectory'].includes(parent.status)) {
+      return result('targetMissing', blocked('targetParentUnsafe'))
+    }
+    if (!parent.details.isDirectory()) {
+      return result('targetMissing', blocked('targetParentUnsafe'))
+    }
+    return result('targetMissing', { status: 'ready' })
   }
   if (destination.status === 'unavailable') {
     return result('inspectionFailed')

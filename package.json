@@ -25,7 +25,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test tests/shell.test.js tests/config.test.js tests/storage.test.js tests/inspection.test.js",
+    "test": "node --test tests/shell.test.js tests/config.test.js tests/storage.test.js tests/inspection.test.js tests/connection-preview.test.js",
     "quality": "yarn lint && yarn format:check && yarn test && yarn build"
   },
   "dependencies": {

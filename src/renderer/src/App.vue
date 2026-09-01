@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { isValidStorageName } from '../../shared/config.js'
+import { buildConnectionPreview } from '../../shared/connection-preview.js'
 import i18next, {
   changeLanguagePreference,
   languagePreference,
@@ -16,6 +17,7 @@ const busy = ref(false)
 const checking = ref(false)
 const storageId = ref('')
 const storage = ref(null)
+const selectedPreview = ref(null)
 const inspectionError = ref({ key: '', path: '', previousResults: false })
 const creation = ref({
   selectionId: '',
@@ -50,6 +52,7 @@ function showWelcome() {
   creationOpenErrorKey.value = ''
   openAfterCreation.value = false
   inspectionError.value = { key: '', path: '', previousResults: false }
+  selectedPreview.value = null
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
 }
 
@@ -64,6 +67,7 @@ async function openStorage() {
     if (result.status === 'opened') {
       storageId.value = result.storageId
       storage.value = result.storage
+      selectedPreview.value = null
       view.value = 'dashboard'
       return
     }
@@ -81,6 +85,22 @@ async function openStorage() {
   } finally {
     busy.value = false
   }
+}
+
+function connectionPreview(connection) {
+  return buildConnectionPreview(connection)
+}
+
+function showConnectionPreview(connection) {
+  const preview = connectionPreview(connection)
+  if (preview?.status !== 'ready') return
+  selectedPreview.value = { connection, preview }
+  view.value = 'preview'
+}
+
+function closeConnectionPreview() {
+  selectedPreview.value = null
+  view.value = 'dashboard'
 }
 
 async function recheckStorage() {
@@ -334,7 +354,7 @@ async function confirmCreation() {
       </button>
     </section>
 
-    <section v-else class="dashboard" aria-labelledby="storage-title">
+    <section v-else-if="view === 'dashboard'" class="dashboard" aria-labelledby="storage-title">
       <div class="dashboard-heading">
         <div class="storage-heading">
           <h2 id="storage-title">{{ storage.name }}</h2>
@@ -403,8 +423,61 @@ async function confirmCreation() {
               </dd>
             </div>
           </dl>
+          <div v-if="connectionPreview(connection)" class="connection-preview-line">
+            <p>
+              <strong>{{ $t('preview.nextStep') }}</strong>
+              {{
+                $t(
+                  `preview.reasons.${
+                    connectionPreview(connection).status === 'ready'
+                      ? 'ready'
+                      : connectionPreview(connection).reason
+                  }`
+                )
+              }}
+            </p>
+            <button
+              v-if="connectionPreview(connection).status === 'ready'"
+              type="button"
+              class="secondary-action"
+              @click="showConnectionPreview(connection)"
+            >
+              {{ $t('preview.open') }}
+            </button>
+          </div>
         </article>
       </div>
+    </section>
+
+    <section v-else class="connection-preview" aria-labelledby="preview-title">
+      <h2 id="preview-title">{{ $t('preview.title') }}</h2>
+      <p class="intro">{{ $t('preview.intro', { name: selectedPreview.connection.name }) }}</p>
+
+      <div class="preview-panel">
+        <span>{{ $t('preview.proposedOperation') }}</span>
+        <strong>{{ $t(`preview.operations.${selectedPreview.preview.operation}`) }}</strong>
+        <dl>
+          <div>
+            <dt>{{ $t('preview.source') }}</dt>
+            <dd>
+              <code>{{ selectedPreview.connection.sourcePath }}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ $t('preview.destination') }}</dt>
+            <dd>
+              <code>{{ selectedPreview.connection.targetPath }}</code>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <p class="preview-effect">{{ $t('preview.effect') }}</p>
+      <p class="preview-unchanged">{{ $t('preview.unchanged') }}</p>
+      <p class="preview-note">{{ $t('preview.note') }}</p>
+      <button type="button" class="secondary-action" @click="closeConnectionPreview">
+        {{ $t('preview.back') }}
+      </button>
     </section>
 
     <footer>

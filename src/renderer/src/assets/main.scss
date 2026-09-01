@@ -145,6 +145,8 @@ button:disabled {
 .storage-actions button,
 .flow-actions button,
 .dashboard-actions button,
+.connection-preview-line button,
+.connection-preview > button,
 .created-state > button {
   min-height: 40px;
   padding: 8px 12px;
@@ -492,6 +494,29 @@ code {
   font-size: 12px;
 }
 
+.connection-preview-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+.connection-preview-line p {
+  margin: 0;
+  color: var(--neutral);
+  font-size: 12px;
+}
+
+.connection-preview-line button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+
 .connection-card dt {
   font-weight: 550;
 }
@@ -555,6 +580,82 @@ code {
   margin: 5px 0 0;
   color: var(--neutral);
   font-size: 13px;
+}
+
+.connection-preview {
+  align-self: center;
+  justify-self: center;
+  width: min(100% - 48px, 600px);
+  max-height: 100%;
+  padding: 14px 0;
+  overflow-y: auto;
+}
+
+.connection-preview h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 550;
+  letter-spacing: -0.4px;
+}
+
+.connection-preview > .intro {
+  margin: 4px 0 11px;
+}
+
+.preview-panel {
+  padding: 11px 13px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.preview-panel > span,
+.preview-panel dt {
+  color: var(--neutral);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.preview-panel > strong {
+  display: block;
+  margin: 1px 0 8px;
+  font-size: 14px;
+}
+
+.preview-panel dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.preview-panel dl > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.preview-panel dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.preview-effect,
+.preview-unchanged,
+.preview-note {
+  margin: 7px 0 0;
+  color: var(--neutral);
+  font-size: 12.5px;
+}
+
+.preview-note {
+  padding: 7px 9px;
+  background: #e6edf5;
+  border-radius: 5px;
+}
+
+.connection-preview > button {
+  min-width: 180px;
+  margin-top: 12px;
 }
 
 footer {
@@ -626,7 +727,8 @@ footer {
   }
 
   .creation-flow,
-  .created-state {
+  .created-state,
+  .connection-preview {
     width: min(100% - 32px, 540px);
   }
 
