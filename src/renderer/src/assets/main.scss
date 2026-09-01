@@ -160,6 +160,17 @@ button:disabled {
   white-space: nowrap;
 }
 
+.danger-action {
+  color: #ffffff;
+  background: #a85d5d;
+  border: 1px solid #a85d5d;
+}
+
+.danger-action:hover {
+  background: #914b4b;
+  border-color: #914b4b;
+}
+
 .primary-action {
   color: var(--primary-content);
   background: var(--primary);

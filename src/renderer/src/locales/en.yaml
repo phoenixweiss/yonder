@@ -143,6 +143,37 @@ preview:
     sourceUnsafe: Use a direct regular file or folder inside storage, not a symbolic link.
     sourceUnsupported: The source must be a regular file or folder.
     inspectionFailed: Resolve the inspection problem, then check again. No change is proposed.
+disconnect:
+  available: Remove this verified link later without changing the configuration or source.
+  open: Disconnect…
+  title: Disconnect connection
+  intro: Review the exact link that would be removed for “{{name}}”.
+  operation: Remove one symbolic link
+  effect: Yonder will remove only the symbolic link at the destination after checking that it still points exactly to this source.
+  unchanged: The source, yonder.yaml, destination folder, and every other file or link remain unchanged.
+  note: This screen is not removal authority. Preparation performs fresh main-process and anchored native checks; one final confirmation is still required.
+  prepare: Prepare disconnect
+  preparing: Checking again…
+  readyTitle: Fresh checks completed
+  readyText: The verified destination folder is held open. Confirm once to remove exactly this matching symbolic link.
+  checkedAt: 'Checked at:'
+  confirm: Remove this link
+  disconnecting: Removing link…
+  cancel: Cancel disconnect
+  back: Back to storage
+  disconnected: The symbolic link was removed and independently checked. The configuration and source were unchanged.
+  disconnectedRefreshFailed: The link was removed, but the dashboard could not be refreshed. Check the storage again before continuing.
+  errors:
+    invalidSelection: This storage selection has expired. Open the folder again.
+    selectionExpired: This one-time confirmation has expired. Return to the storage and prepare disconnect again.
+    unsupportedPlatform: Disconnect is currently available only on verified macOS builds.
+    operationBusy: Another link operation is still active. Wait and try again.
+    notConnected: This destination is no longer the connected symbolic link. Nothing was removed; check the storage again.
+    linkMismatch: The destination is not the exact Yonder link expected for this source. Nothing was removed.
+    stateChanged: The configuration, source, destination, or parent folder changed during preparation. Nothing was removed; check again.
+    removalUncertain: Yonder could not prove whether the link was removed. Do not repeat the action blindly; check the storage and destination first.
+    notReady: This connection is not ready for safe disconnect. Nothing was removed.
+    unavailable: Yonder could not prepare or complete disconnect. Nothing else was changed.
 apply:
   prepare: Prepare Apply
   preparing: Checking again…

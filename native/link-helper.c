@@ -1,7 +1,7 @@
-// Isolated macOS helper. It creates exactly one symbolic link, only after an
-// exact confirmation line. The destination parent is opened component by
-// component without following symbolic links and remains anchored by its file
-// descriptor across confirmation.
+// Isolated macOS helper. It creates or removes exactly one symbolic link, only
+// after an exact confirmation line. The destination parent is opened component
+// by component without following symbolic links and remains anchored by its
+// file descriptor across confirmation.
 #ifndef __APPLE__
 #error "This helper has only been validated for macOS"
 #endif
@@ -99,17 +99,33 @@ static bool emit(const char *status) {
 static int finish(int directory, const char *status) {
   if (directory >= 0) close(directory);
   bool sent = emit(status);
-  return sent && strcmp(status, "created") == 0 ? 0 : 1;
+  return sent &&
+    (strcmp(status, "created") == 0 || strcmp(status, "removed") == 0) ? 0 : 1;
+}
+
+static int link_state(int directory, const char *name, const char *source) {
+  struct stat entry;
+  if (fstatat(directory, name, &entry, AT_SYMLINK_NOFOLLOW) != 0) {
+    return errno == ENOENT ? 0 : -1;
+  }
+  if (!S_ISLNK(entry.st_mode)) return 2;
+  char actual[PATH_MAX];
+  ssize_t size = readlinkat(directory, name, actual, sizeof(actual));
+  if (size < 0) return -1;
+  return (size_t)size == strlen(source) &&
+    memcmp(actual, source, (size_t)size) == 0 ? 1 : 2;
 }
 
 int main(int argc, char **argv) {
   (void)argv;
   signal(SIGPIPE, SIG_IGN);
-  char version[32], parent[PATH_MAX], source[PATH_MAX], name[NAME_MAX + 1];
+  char version[32], action[16], parent[PATH_MAX], source[PATH_MAX], name[NAME_MAX + 1];
   char device_text[32], inode_text[32];
   uintmax_t device, inode;
   if (argc != 1 ||
-      !field(version, sizeof(version)) || strcmp(version, "yonder-link-v1") != 0 ||
+      !field(version, sizeof(version)) || strcmp(version, "yonder-link-v2") != 0 ||
+      !field(action, sizeof(action)) ||
+      (strcmp(action, "create") != 0 && strcmp(action, "remove") != 0) ||
       !field(parent, sizeof(parent)) || !field(device_text, sizeof(device_text)) ||
       !field(inode_text, sizeof(inode_text)) || !field(source, sizeof(source)) ||
       !field(name, sizeof(name)) || !number(device_text, &device) ||
@@ -122,11 +138,14 @@ int main(int argc, char **argv) {
   if (directory < 0 || !identity(directory, device, inode)) {
     return finish(directory, "rejected");
   }
-  struct stat entry;
-  if (fstatat(directory, name, &entry, AT_SYMLINK_NOFOLLOW) == 0) {
+  int initial = link_state(directory, name, source);
+  if (initial < 0) return finish(directory, "rejected");
+  if (strcmp(action, "create") == 0 && initial != 0) {
     return finish(directory, "occupied");
   }
-  if (errno != ENOENT) return finish(directory, "rejected");
+  if (strcmp(action, "remove") == 0 && initial != 1) {
+    return finish(directory, initial == 0 ? "missing" : "mismatch");
+  }
   if (!emit("ready")) {
     close(directory);
     return 1;
@@ -140,19 +159,29 @@ int main(int argc, char **argv) {
     return finish(directory, "rejected");
   }
 
+  if (!same_path(parent, device, inode)) return finish(directory, "changed");
+  int current = link_state(directory, name, source);
+  if (current < 0) return finish(directory, "changed");
+
+  if (strcmp(action, "remove") == 0) {
+    if (current != 1) return finish(directory, current == 0 ? "missing" : "mismatch");
+    if (unlinkat(directory, name, 0) != 0) return finish(directory, "uncertain");
+    int removed = link_state(directory, name, source);
+    return finish(
+      directory,
+      removed == 0 && same_path(parent, device, inode) ? "removed" : "uncertain"
+    );
+  }
+
+  if (current != 0) return finish(directory, "occupied");
   if (symlinkat(source, directory, name) != 0) {
     int failure = errno;
-    bool occupied = failure == EEXIST &&
-      fstatat(directory, name, &entry, AT_SYMLINK_NOFOLLOW) == 0 &&
+    bool occupied = failure == EEXIST && link_state(directory, name, source) > 0 &&
       same_path(parent, device, inode);
     return finish(directory, occupied ? "occupied" : "uncertain");
   }
 
-  char actual[PATH_MAX];
-  ssize_t size = readlinkat(directory, name, actual, sizeof(actual));
-  bool verified = size >= 0 && (size_t)size == strlen(source) &&
-    memcmp(actual, source, (size_t)size) == 0 &&
-    fstatat(directory, name, &entry, AT_SYMLINK_NOFOLLOW) == 0 &&
-    S_ISLNK(entry.st_mode) && same_path(parent, device, inode);
+  bool verified = link_state(directory, name, source) == 1 &&
+    same_path(parent, device, inode);
   return finish(directory, verified ? "created" : "uncertain");
 }

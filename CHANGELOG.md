@@ -24,6 +24,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   exact paths, and a proposed YAML entry.
 - A separately confirmed, single-entry `yonder.yaml` update with fresh path and file
   checks, one-time authority, and no automatic symbolic-link creation.
+- A separately confirmed single-connection disconnect flow that removes only the
+  exact verified symbolic link while preserving configuration, source data, and conflicts.
 
 ### Changed
 

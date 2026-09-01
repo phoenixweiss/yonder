@@ -26,7 +26,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test tests/shell.test.js tests/config.test.js tests/storage.test.js tests/inspection.test.js tests/connection-preview.test.js tests/connection-draft.test.js tests/connection-authoring.test.js tests/apply-journal.test.js tests/native-link-helper.test.js tests/connection-apply.test.js",
+    "test": "node --test tests/shell.test.js tests/config.test.js tests/storage.test.js tests/inspection.test.js tests/connection-preview.test.js tests/connection-draft.test.js tests/connection-authoring.test.js tests/apply-journal.test.js tests/native-link-helper.test.js tests/connection-apply.test.js tests/connection-disconnect.test.js",
     "quality": "yarn lint && yarn format:check && yarn test && yarn build"
   },
   "dependencies": {

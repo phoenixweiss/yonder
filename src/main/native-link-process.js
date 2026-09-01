@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
-const fields = ['parent', 'device', 'inode', 'source', 'name']
+const fields = ['action', 'parent', 'device', 'inode', 'source', 'name']
 const maxOutputBytes = 128
 
 export class NativeLinkError extends Error {
@@ -54,6 +54,7 @@ function encode(request) {
   }
   request = Object.fromEntries(fields.map((key) => [key, request[key]]))
   if (
+    !['create', 'remove'].includes(request.action) ||
     !absolutePath(request.parent) ||
     !absolutePath(request.source) ||
     !component(request.name) ||
@@ -62,7 +63,7 @@ function encode(request) {
   ) {
     fail('notReady')
   }
-  return Buffer.from(['yonder-link-v1', ...fields.map((key) => request[key]), ''].join('\0'))
+  return Buffer.from(['yonder-link-v2', ...fields.map((key) => request[key]), ''].join('\0'))
 }
 
 export function createNativeLinkProcess({
@@ -84,7 +85,9 @@ export function createNativeLinkProcess({
   let active = null
 
   function start(input) {
+    const action = input.action
     const operation = {
+      action,
       phase: 'starting',
       token: randomUUID(),
       dispatched: false,
@@ -118,7 +121,11 @@ export function createNativeLinkProcess({
 
     function stop(code) {
       if (operation.closed || operation.reason) return
-      operation.reason = operation.dispatched ? 'creationUncertain' : code
+      operation.reason = operation.dispatched
+        ? operation.action === 'create'
+          ? 'creationUncertain'
+          : 'removalUncertain'
+        : code
       operation.token = null
       clearTimeout(deadline)
       shutdown = setTimeout(() => {
@@ -155,9 +162,19 @@ export function createNativeLinkProcess({
           arm(idleTimeoutMs)
           operation.ready.resolve({ token: operation.token })
         } else if (
-          (operation.phase === 'starting' && ['occupied', 'rejected'].includes(line)) ||
+          (operation.phase === 'starting' &&
+            ['occupied', 'missing', 'mismatch', 'changed', 'rejected'].includes(line)) ||
           (operation.phase === 'confirming' &&
-            ['created', 'occupied', 'rejected', 'uncertain'].includes(line))
+            [
+              'created',
+              'removed',
+              'occupied',
+              'missing',
+              'mismatch',
+              'changed',
+              'rejected',
+              'uncertain'
+            ].includes(line))
         ) {
           operation.reported = line
         } else {
@@ -175,14 +192,27 @@ export function createNativeLinkProcess({
       clearTimeout(deadline)
       clearTimeout(shutdown)
       if (active === operation) active = null
-      let error = operation.reason || (operation.dispatched ? 'creationUncertain' : 'notReady')
+      let error =
+        operation.reason ||
+        (operation.dispatched
+          ? operation.action === 'create'
+            ? 'creationUncertain'
+            : 'removalUncertain'
+          : 'notReady')
       let result
       if (!operation.reason && !signal && !operation.output && operation.reported) {
-        if (operation.reported === 'created' && code === 0 && operation.dispatched) {
+        const expected = operation.action === 'create' ? 'created' : 'removed'
+        if (operation.reported === expected && code === 0 && operation.dispatched) {
           error = ''
-          result = { status: 'created' }
+          result = { status: expected }
         } else if (code === 1 && operation.reported === 'occupied') {
           error = 'destinationOccupied'
+        } else if (code === 1 && operation.reported === 'missing') {
+          error = 'targetMissing'
+        } else if (code === 1 && operation.reported === 'mismatch') {
+          error = 'targetMismatch'
+        } else if (code === 1 && operation.reported === 'changed') {
+          error = 'stateChanged'
         }
       }
       settle(error, result)
@@ -207,7 +237,7 @@ export function createNativeLinkProcess({
       child.stdout.on('data', receive)
       child.stderr.on('data', () => stop('notReady'))
       arm(timeoutMs)
-      child.stdin.write(input, (error) => {
+      child.stdin.write(input.bytes, (error) => {
         if (error) stop('notReady')
       })
     } catch {
@@ -234,7 +264,7 @@ export function createNativeLinkProcess({
   async function prepare(request) {
     if (platform !== 'darwin') fail('unsupportedPlatform')
     if (active) fail('operationBusy')
-    const operation = start(encode(request))
+    const operation = start({ action: request.action, bytes: encode(request) })
     const result = await operation.ready.promise
     if (result.error) fail(result.error)
     if (operation.reason || operation.closed || active !== operation)

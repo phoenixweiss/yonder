@@ -31,6 +31,7 @@ async function fixture(t) {
     source,
     target,
     request: {
+      action: 'create',
       parent,
       device: String(stat.dev),
       inode: String(stat.ino),
@@ -43,7 +44,8 @@ async function fixture(t) {
 function encode(request) {
   return Buffer.from(
     [
-      'yonder-link-v1',
+      'yonder-link-v2',
+      request.action,
       request.parent,
       request.device,
       request.inode,
@@ -92,6 +94,39 @@ test('native helper creates exactly one confirmed symbolic link', mac, async (t)
   assert.equal(await fs.readlink(f.target), f.source)
 })
 
+test('native helper removes exactly one confirmed matching symbolic link', mac, async (t) => {
+  const f = await fixture(t)
+  await fs.symlink(f.source, f.target)
+  const session = start({ ...f.request, action: 'remove' })
+  assert.equal(await session.ready, 'ready')
+  assert.equal(await fs.readlink(f.target), f.source)
+  session.child.stdin.end('confirm\n')
+  assert.deepEqual(await session.finished, {
+    code: 0,
+    signal: null,
+    stdout: 'ready\nremoved\n',
+    stderr: ''
+  })
+  await assert.rejects(fs.lstat(f.target), { code: 'ENOENT' })
+})
+
+test('remove cancellation and mismatches preserve every destination entry', mac, async (t) => {
+  const f = await fixture(t)
+  await fs.symlink(f.source, f.target)
+  const cancelled = start({ ...f.request, action: 'remove' })
+  assert.equal(await cancelled.ready, 'ready')
+  cancelled.child.stdin.end('')
+  assert.equal((await cancelled.finished).stdout, 'ready\ncancelled\n')
+  assert.equal(await fs.readlink(f.target), f.source)
+
+  await fs.unlink(f.target)
+  await fs.writeFile(f.target, 'keep me')
+  const mismatch = start({ ...f.request, action: 'remove' })
+  mismatch.child.stdin.end('confirm\n')
+  assert.equal((await mismatch.finished).stdout, 'mismatch\n')
+  assert.equal(await fs.readFile(f.target, 'utf8'), 'keep me')
+})
+
 test('cancellation and conflicts leave existing filesystem entries unchanged', mac, async (t) => {
   const f = await fixture(t)
   const cancelled = start(f.request)
@@ -125,7 +160,28 @@ test('an anchored parent replacement never redirects the write', mac, async (t) 
   assert.deepEqual(await session.finished, {
     code: 1,
     signal: null,
-    stdout: 'ready\nuncertain\n',
+    stdout: 'ready\nchanged\n',
+    stderr: ''
+  })
+  assert.deepEqual(await fs.readdir(substitute), [])
+  await assert.rejects(fs.lstat(path.join(moved, path.basename(f.target))), { code: 'ENOENT' })
+})
+
+test('an anchored parent replacement never redirects or removes a link', mac, async (t) => {
+  const f = await fixture(t)
+  const substitute = path.join(f.root, 'remove-substitute')
+  const moved = `${f.parent}-remove-moved`
+  await fs.symlink(f.source, f.target)
+  await fs.mkdir(substitute)
+  const session = start({ ...f.request, action: 'remove' })
+  assert.equal(await session.ready, 'ready')
+  await fs.rename(f.parent, moved)
+  await fs.symlink(substitute, f.parent)
+  session.child.stdin.end('confirm\n')
+  assert.deepEqual(await session.finished, {
+    code: 1,
+    signal: null,
+    stdout: 'ready\nchanged\n',
     stderr: ''
   })
   assert.deepEqual(await fs.readdir(substitute), [])

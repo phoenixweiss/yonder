@@ -26,6 +26,10 @@ const selectedPreview = ref(null)
 const applyPreparation = ref(null)
 const applyError = ref({ key: '', recovery: null })
 const applyBusy = ref(false)
+const selectedDisconnect = ref(null)
+const disconnectPreparation = ref(null)
+const disconnectErrorKey = ref('')
+const disconnectBusy = ref(false)
 const dashboardNoticeKey = ref('')
 const connectionDraftBusy = ref(false)
 const connectionDraftErrorKey = ref('')
@@ -106,6 +110,9 @@ function showWelcome() {
   selectedPreview.value = null
   applyPreparation.value = null
   applyError.value = { key: '', recovery: null }
+  selectedDisconnect.value = null
+  disconnectPreparation.value = null
+  disconnectErrorKey.value = ''
   dashboardNoticeKey.value = ''
   resetConnectionDraft()
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
@@ -126,6 +133,9 @@ async function openStorage() {
       selectedPreview.value = null
       applyPreparation.value = null
       applyError.value = { key: '', recovery: null }
+      selectedDisconnect.value = null
+      disconnectPreparation.value = null
+      disconnectErrorKey.value = ''
       resetConnectionDraft()
       view.value = 'dashboard'
       return
@@ -488,6 +498,105 @@ async function closeConnectionPreview() {
   selectedPreview.value = null
   applyPreparation.value = null
   applyError.value = { key: '', recovery: null }
+  view.value = 'dashboard'
+}
+
+function connectionDisconnectErrorKey(status) {
+  const keys = {
+    invalidSelection: 'disconnect.errors.invalidSelection',
+    selectionExpired: 'disconnect.errors.selectionExpired',
+    unsupportedPlatform: 'disconnect.errors.unsupportedPlatform',
+    operationBusy: 'disconnect.errors.operationBusy',
+    notConnected: 'disconnect.errors.notConnected',
+    linkMismatch: 'disconnect.errors.linkMismatch',
+    targetMissing: 'disconnect.errors.stateChanged',
+    targetMismatch: 'disconnect.errors.stateChanged',
+    stateChanged: 'disconnect.errors.stateChanged',
+    removalUncertain: 'disconnect.errors.removalUncertain',
+    notReady: 'disconnect.errors.notReady'
+  }
+  return keys[status] ?? 'disconnect.errors.unavailable'
+}
+
+function showConnectionDisconnect(connection) {
+  selectedDisconnect.value = connection
+  disconnectPreparation.value = null
+  disconnectErrorKey.value = ''
+  view.value = 'disconnect'
+}
+
+async function prepareSelectedConnectionDisconnect() {
+  if (!selectedDisconnect.value || disconnectBusy.value) return
+  disconnectErrorKey.value = ''
+  disconnectBusy.value = true
+  try {
+    const result = await window.yonder.prepareConnectionDisconnect(
+      storageId.value,
+      selectedDisconnect.value.id
+    )
+    if (result.status === 'ready') {
+      disconnectPreparation.value = result
+      return
+    }
+    disconnectErrorKey.value = connectionDisconnectErrorKey(result.status)
+  } catch {
+    disconnectErrorKey.value = 'disconnect.errors.unavailable'
+  } finally {
+    disconnectBusy.value = false
+  }
+}
+
+async function confirmSelectedConnectionDisconnect() {
+  if (!disconnectPreparation.value || disconnectBusy.value) return
+  const token = disconnectPreparation.value.token
+  disconnectErrorKey.value = ''
+  disconnectBusy.value = true
+  try {
+    const result = await window.yonder.confirmConnectionDisconnect(token)
+    disconnectPreparation.value = null
+    if (result.status === 'disconnected') {
+      if (result.storageId && result.storage) {
+        storageId.value = result.storageId
+        storage.value = result.storage
+        dashboardNoticeKey.value = 'disconnect.disconnected'
+      } else {
+        dashboardNoticeKey.value = 'disconnect.disconnectedRefreshFailed'
+      }
+      selectedDisconnect.value = null
+      view.value = 'dashboard'
+      return
+    }
+    disconnectErrorKey.value = connectionDisconnectErrorKey(result.status)
+  } catch {
+    disconnectPreparation.value = null
+    disconnectErrorKey.value = 'disconnect.errors.unavailable'
+  } finally {
+    disconnectBusy.value = false
+  }
+}
+
+async function closeConnectionDisconnect() {
+  if (disconnectBusy.value) return
+  if (disconnectPreparation.value?.token) {
+    disconnectBusy.value = true
+    try {
+      const result = await window.yonder.cancelConnectionDisconnect(
+        disconnectPreparation.value.token
+      )
+      if (!['cancelled', 'selectionExpired', 'invalidSelection'].includes(result.status)) {
+        disconnectErrorKey.value = connectionDisconnectErrorKey(result.status)
+        return
+      }
+    } catch {
+      disconnectErrorKey.value = 'disconnect.errors.unavailable'
+      return
+    } finally {
+      disconnectBusy.value = false
+    }
+  }
+  selectedDisconnect.value = null
+  disconnectPreparation.value = null
+  disconnectErrorKey.value = ''
   view.value = 'dashboard'
 }
 
@@ -1060,7 +1169,94 @@ async function confirmCreation() {
               {{ $t('preview.open') }}
             </button>
           </div>
+          <div v-if="connection.state === 'connected'" class="connection-preview-line">
+            <p>
+              <strong>{{ $t('preview.nextStep') }}</strong>
+              {{ $t('disconnect.available') }}
+            </p>
+            <button
+              type="button"
+              class="secondary-action"
+              @click="showConnectionDisconnect(connection)"
+            >
+              {{ $t('disconnect.open') }}
+            </button>
+          </div>
         </article>
+      </div>
+    </section>
+
+    <section
+      v-else-if="view === 'disconnect'"
+      class="connection-preview"
+      aria-labelledby="disconnect-title"
+    >
+      <h2 id="disconnect-title">{{ $t('disconnect.title') }}</h2>
+      <p class="intro">{{ $t('disconnect.intro', { name: selectedDisconnect.name }) }}</p>
+
+      <div class="preview-panel">
+        <span>{{ $t('preview.proposedOperation') }}</span>
+        <strong>{{ $t('disconnect.operation') }}</strong>
+        <dl>
+          <div>
+            <dt>{{ $t('preview.source') }}</dt>
+            <dd>
+              <code>{{ selectedDisconnect.sourcePath }}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ $t('preview.destination') }}</dt>
+            <dd>
+              <code>{{ selectedDisconnect.targetPath }}</code>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <p class="preview-effect">{{ $t('disconnect.effect') }}</p>
+      <p class="preview-unchanged">{{ $t('disconnect.unchanged') }}</p>
+      <p class="preview-note">{{ $t('disconnect.note') }}</p>
+
+      <div v-if="disconnectPreparation" class="apply-confirmation" role="status">
+        <strong>{{ $t('disconnect.readyTitle') }}</strong>
+        <p>{{ $t('disconnect.readyText') }}</p>
+        <small
+          >{{ $t('disconnect.checkedAt') }}
+          <code>{{ disconnectPreparation.checkedAt }}</code></small
+        >
+      </div>
+
+      <p v-if="disconnectErrorKey" class="flow-error apply-error" role="alert">
+        {{ $t(disconnectErrorKey) }}
+      </p>
+
+      <div class="flow-actions preview-actions">
+        <button
+          v-if="!disconnectPreparation && !disconnectErrorKey"
+          type="button"
+          class="primary-action"
+          :disabled="disconnectBusy"
+          @click="prepareSelectedConnectionDisconnect"
+        >
+          {{ disconnectBusy ? $t('disconnect.preparing') : $t('disconnect.prepare') }}
+        </button>
+        <button
+          v-if="disconnectPreparation"
+          type="button"
+          class="danger-action"
+          :disabled="disconnectBusy"
+          @click="confirmSelectedConnectionDisconnect"
+        >
+          {{ disconnectBusy ? $t('disconnect.disconnecting') : $t('disconnect.confirm') }}
+        </button>
+        <button
+          type="button"
+          class="secondary-action"
+          :disabled="disconnectBusy"
+          @click="closeConnectionDisconnect"
+        >
+          {{ disconnectPreparation ? $t('disconnect.cancel') : $t('disconnect.back') }}
+        </button>
       </div>
     </section>
 

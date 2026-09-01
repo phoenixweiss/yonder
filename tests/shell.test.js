@@ -134,3 +134,21 @@ test('connection authoring separates preview from a one-time configuration confi
   assert.match(mainSource, /authoringController\.prepare\(draftStorage\.folderPath/)
   assert.match(mainSource, /authoringController\.confirm\(token\)/)
 })
+
+test('connection disconnect exposes only identifiers and one-time confirmation tokens', async () => {
+  const [appSource, preloadSource, mainSource] = await Promise.all([
+    readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
+    readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/main/index.js', import.meta.url), 'utf8')
+  ])
+
+  assert.match(appSource, /showConnectionDisconnect\(connection\)/)
+  assert.match(appSource, /prepareConnectionDisconnect\([\s\S]*?storageId\.value/)
+  assert.match(appSource, /confirmConnectionDisconnect\(token\)/)
+  assert.match(preloadSource, /connection:prepare-disconnect/)
+  assert.match(preloadSource, /connection:confirm-disconnect/)
+  assert.match(preloadSource, /connection:cancel-disconnect/)
+  assert.doesNotMatch(preloadSource, /unlink|removeLink|sourcePath|targetPath/)
+  assert.match(mainSource, /disconnectController\.prepare\([\s\S]*?disconnectStorage\.folderPath/)
+  assert.match(mainSource, /disconnectController\.confirm\(token\)/)
+})

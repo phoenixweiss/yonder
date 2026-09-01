@@ -17,7 +17,7 @@ own cloud, account, server, or telemetry.
 - Existing files are never replaced silently.
 - A human-readable `yonder.yaml` describes the connections.
 
-## Inspection and one-link Apply
+## Inspection, one-link Apply, and disconnect
 
 Yonder can open an existing storage and inspect it without changing files:
 
@@ -36,6 +36,12 @@ holds the verified destination folder open, and asks for one final confirmation
 before a small native macOS helper creates exactly one symbolic link. Yonder does
 not create parent folders, replace conflicts, move files, edit `yonder.yaml`, or
 apply several connections at once.
+
+A connected entry can be disconnected through a matching two-step action. Fresh
+main-process checks and the anchored native helper remove only the exact symbolic
+link that still points to the configured source. A missing, replaced, redirected,
+or otherwise changed destination blocks removal. Disconnect does not edit
+`yonder.yaml`, delete the source, or touch any ordinary file or other link.
 
 An opened storage also offers a guarded draft for one new connection. The user
 chooses an existing source inside the storage and an existing destination folder
@@ -60,7 +66,9 @@ the active storage identifier, a configured connection identifier, and a one-tim
 confirmation token. A private append-only local journal is written before the link
 command, so an uncertain outcome blocks blind retries. A later matching-link
 observation can resolve that record; absent, conflicting, or changed state remains
-blocked for manual inspection.
+blocked for manual inspection. Disconnect likewise accepts only active identifiers
+and a one-time token; after dispatch, Yonder reports success only when a fresh
+inspection proves that the exact link is absent and the guarded selection is unchanged.
 
 ## Technical direction
 

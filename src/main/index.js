@@ -8,6 +8,10 @@ import {
   ConnectionAuthoringError,
   createConnectionAuthoringController
 } from './connection-authoring.js'
+import {
+  ConnectionDisconnectError,
+  createConnectionDisconnectController
+} from './connection-disconnect.js'
 import { ConnectionDraftError, createConnectionDraftController } from './connection-draft.js'
 import { inspectStorage, StorageInspectionError } from './inspection.js'
 import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
@@ -19,8 +23,10 @@ let activeStorage
 let applyController
 let draftController
 let authoringController
+let disconnectController
 let pendingApplyStorageId = ''
 let pendingDraftStorageId = ''
+let pendingDisconnectStorageId = ''
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 const nativeHelperPath = fileURLToPath(
   new URL('../../build/native/yonder-link-helper', import.meta.url)
@@ -67,8 +73,10 @@ function createWindow() {
     applyController?.clear()
     draftController?.clear()
     authoringController?.clear()
+    disconnectController?.clear()
     pendingApplyStorageId = ''
     pendingDraftStorageId = ''
+    pendingDisconnectStorageId = ''
     mainWindow = undefined
     pendingCreation = undefined
     activeStorage = undefined
@@ -87,6 +95,11 @@ async function clearPendingApply() {
   await applyController?.clear()
 }
 
+async function clearPendingDisconnect() {
+  pendingDisconnectStorageId = ''
+  await disconnectController?.clear()
+}
+
 function clearPendingDraft() {
   pendingDraftStorageId = ''
   authoringController?.clear()
@@ -102,6 +115,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:choose-for-opening', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    await clearPendingDisconnect()
     clearPendingDraft()
 
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -129,6 +143,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:recheck', async (event, storageId) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    await clearPendingDisconnect()
     clearPendingDraft()
     if (typeof storageId !== 'string' || storageId !== activeStorage?.id) {
       return { status: 'invalidSelection' }
@@ -152,6 +167,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:choose-for-creation', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    await clearPendingDisconnect()
     clearPendingDraft()
     pendingCreation = undefined
 
@@ -178,6 +194,7 @@ function installStorageHandlers() {
   ipcMain.handle('storage:create-config', async (event, request) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
+    await clearPendingDisconnect()
     clearPendingDraft()
     if (
       !request ||
@@ -328,6 +345,10 @@ function installStorageHandlers() {
       return { status: 'invalidSelection' }
     }
 
+    await clearPendingApply()
+    await clearPendingDisconnect()
+    if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
+
     const draftStorage = { ...activeStorage }
     try {
       const result = await authoringController.prepare(draftStorage.folderPath, {
@@ -405,6 +426,10 @@ function installStorageHandlers() {
       return { status: 'invalidSelection' }
     }
 
+    clearPendingAuthoring()
+    await clearPendingDisconnect()
+    if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
+
     const applyStorage = { ...activeStorage }
     try {
       const result = await applyController.prepare(
@@ -465,6 +490,83 @@ function installStorageHandlers() {
       return { status: error instanceof ConnectionApplyError ? error.code : 'unavailable' }
     }
   })
+
+  ipcMain.handle('connection:prepare-disconnect', async (event, request) => {
+    if (!isTrustedIpcEvent(event) || !disconnectController) return { status: 'unavailable' }
+    if (
+      !request ||
+      Object.keys(request).length !== 2 ||
+      typeof request.storageId !== 'string' ||
+      typeof request.connectionId !== 'string' ||
+      request.storageId !== activeStorage?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    clearPendingAuthoring()
+    await clearPendingApply()
+    if (request.storageId !== activeStorage?.id) return { status: 'invalidSelection' }
+    const disconnectStorage = { ...activeStorage }
+    try {
+      const result = await disconnectController.prepare(
+        disconnectStorage.folderPath,
+        request.connectionId,
+        app.getPath('home')
+      )
+      if (activeStorage?.id !== disconnectStorage.id) {
+        await clearPendingDisconnect()
+        return { status: 'invalidSelection' }
+      }
+      pendingDisconnectStorageId = disconnectStorage.id
+      return result
+    } catch (error) {
+      pendingDisconnectStorageId = ''
+      return {
+        status: error instanceof ConnectionDisconnectError ? error.code : 'unavailable'
+      }
+    }
+  })
+
+  ipcMain.handle('connection:confirm-disconnect', async (event, token) => {
+    if (!isTrustedIpcEvent(event) || !disconnectController) return { status: 'unavailable' }
+    if (!activeStorage || pendingDisconnectStorageId !== activeStorage.id) {
+      return { status: 'invalidSelection' }
+    }
+
+    const disconnectStorage = { ...activeStorage }
+    pendingDisconnectStorageId = ''
+    try {
+      const result = await disconnectController.confirm(token)
+      if (activeStorage?.id !== disconnectStorage.id || result.connectionId === undefined) {
+        return { status: 'disconnected', refreshFailed: true }
+      }
+      try {
+        const storage = await inspectStorage(disconnectStorage.folderPath, {
+          homeDirectory: app.getPath('home'),
+          systemPlatform: process.platform
+        })
+        return { status: 'disconnected', storageId: disconnectStorage.id, storage }
+      } catch {
+        return { status: 'disconnected', refreshFailed: true }
+      }
+    } catch (error) {
+      return {
+        status: error instanceof ConnectionDisconnectError ? error.code : 'unavailable'
+      }
+    }
+  })
+
+  ipcMain.handle('connection:cancel-disconnect', async (event, token) => {
+    if (!isTrustedIpcEvent(event) || !disconnectController) return { status: 'unavailable' }
+    pendingDisconnectStorageId = ''
+    try {
+      return await disconnectController.cancel(token)
+    } catch (error) {
+      return {
+        status: error instanceof ConnectionDisconnectError ? error.code : 'unavailable'
+      }
+    }
+  })
 }
 
 app.whenReady().then(async () => {
@@ -475,6 +577,7 @@ app.whenReady().then(async () => {
   authoringController = createConnectionAuthoringController({
     previewDraft: (storagePath, request) => draftController.preview(storagePath, request)
   })
+  disconnectController = createConnectionDisconnectController({ executable: nativeHelperPath })
   try {
     const journal = await openApplyJournal(join(app.getPath('userData'), 'operation-journal'))
     applyController = createConnectionApplyController({

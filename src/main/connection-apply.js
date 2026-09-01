@@ -177,7 +177,7 @@ async function captureObservation(storagePath, connectionId, homeDirectory, plat
   }
 }
 
-async function stableObservation(...args) {
+export async function captureStableConnectionObservation(...args) {
   const first = await captureObservation(...args)
   const second = await captureObservation(...args)
   if (!isDeepStrictEqual(first, second)) fail('stateChanged')
@@ -249,7 +249,7 @@ export function createConnectionApplyController({
     const { operation, outcome } = unresolved
     let observed
     try {
-      observed = await stableObservation(
+      observed = await captureStableConnectionObservation(
         operation.selection.storagePath,
         operation.selection.connectionId,
         operation.selection.homePath,
@@ -278,20 +278,31 @@ export function createConnectionApplyController({
       const started = ++generation
       await native.clear()
       await recoverUnresolved()
-      const candidate = await stableObservation(storagePath, connectionId, homeDirectory, platform)
+      const candidate = await captureStableConnectionObservation(
+        storagePath,
+        connectionId,
+        homeDirectory,
+        platform
+      )
       requireReady(candidate)
       await destinationMissing(candidate.selection.targetPath)
       const parentPath = path.dirname(candidate.selection.targetPath)
       const parent = candidate.selection.directories.find(({ path: value }) => value === parentPath)
       if (!parent) fail('stateChanged')
       const prepared = await native.prepare({
+        action: 'create',
         parent: parent.path,
         device: parent.dev,
         inode: parent.ino,
         source: candidate.selection.sourcePath,
         name: path.basename(candidate.selection.targetPath)
       })
-      const current = await stableObservation(storagePath, connectionId, homeDirectory, platform)
+      const current = await captureStableConnectionObservation(
+        storagePath,
+        connectionId,
+        homeDirectory,
+        platform
+      )
       if (started !== generation || !isDeepStrictEqual(candidate, current)) {
         await native.clear()
         fail('stateChanged')
@@ -331,7 +342,7 @@ export function createConnectionApplyController({
 
       try {
         if (started !== generation) fail('selectionExpired')
-        const current = await stableObservation(
+        const current = await captureStableConnectionObservation(
           candidate.selection.storagePath,
           candidate.selection.connectionId,
           candidate.selection.homePath,
@@ -343,7 +354,7 @@ export function createConnectionApplyController({
 
         const begun = await journal.begin(structuredClone(candidate.selection))
         operation = begun.operation
-        const finalCheck = await stableObservation(
+        const finalCheck = await captureStableConnectionObservation(
           candidate.selection.storagePath,
           candidate.selection.connectionId,
           candidate.selection.homePath,
@@ -358,7 +369,7 @@ export function createConnectionApplyController({
         dispatched = true
         const result = await native.confirm(token)
         if (result.status !== 'created') fail('creationUncertain')
-        const connected = await stableObservation(
+        const connected = await captureStableConnectionObservation(
           candidate.selection.storagePath,
           candidate.selection.connectionId,
           candidate.selection.homePath,
@@ -385,7 +396,9 @@ export function createConnectionApplyController({
             fail('journalWriteUncertain')
           }
         }
-        if (dispatched && error?.code !== 'destinationOccupied') fail('creationUncertain')
+        if (dispatched && !['destinationOccupied', 'stateChanged'].includes(error?.code)) {
+          fail('creationUncertain')
+        }
         throw error
       }
     })
