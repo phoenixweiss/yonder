@@ -17,7 +17,7 @@ own cloud, account, server, or telemetry.
 - Existing files are never replaced silently.
 - A human-readable `yonder.yaml` describes the connections.
 
-## Read-only inspection
+## Inspection and one-link Apply
 
 Yonder can open an existing storage and inspect it without changing files:
 
@@ -30,8 +30,12 @@ Creating a new empty `yonder.yaml` is available as a separate flow: Yonder shows
 the selected folder, storage name, and exact new file before asking for confirmation.
 An unchecked-by-default option can open the new storage immediately after creation;
 this performs the same read-only inspection and does not add further writes.
-Changing a configuration, previewing filesystem actions, creating links, and
-resolving conflicts will follow as separate, explicitly confirmed steps.
+For a safely inspectable missing target, Yonder first shows a display-only preview.
+Apply is a separate two-step action: the main process repeats every relevant check,
+holds the verified destination folder open, and asks for one final confirmation
+before a small native macOS helper creates exactly one symbolic link. Yonder does
+not create parent folders, replace conflicts, move files, edit `yonder.yaml`, or
+apply several connections at once.
 
 ## Configuration
 
@@ -43,9 +47,12 @@ When creating a storage, Yonder writes only a new `yonder.yaml` with an empty
 connection list. It uses exclusive creation and never replaces an existing file.
 Configuration reads are size-limited and strict. Rechecking refreshes the displayed
 state but never creates links, moves files, or changes the configuration.
-For a safely inspectable missing target, Yonder can show a display-only preview of
-one proposed symbolic link. The preview is not write authority, exposes no apply
-action, and clearly blocks missing or redirected parent folders and unsafe sources.
+The renderer never supplies filesystem paths as write authority. Apply accepts only
+the active storage identifier, a configured connection identifier, and a one-time
+confirmation token. A private append-only local journal is written before the link
+command, so an uncertain outcome blocks blind retries. A later matching-link
+observation can resolve that record; absent, conflicting, or changed state remains
+blocked for manual inspection.
 
 ## Technical direction
 
@@ -65,7 +72,8 @@ Development proceeds in small, reviewed steps.
 
 ## Development
 
-Yonder currently requires Node.js 24 and Yarn Classic `1.22.22`.
+Yonder currently requires Node.js 24 and Yarn Classic `1.22.22`. Native macOS builds
+also use the system Clang compiler.
 
 ```sh
 corepack yarn install --frozen-lockfile

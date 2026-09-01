@@ -88,14 +88,23 @@ test('opening a newly created storage is an explicit opt-in', async () => {
   assert.match(appSource, /createStorageConfig\([\s\S]*?openAfterCreation\.value/)
 })
 
-test('connection preview adds no apply bridge or action', async () => {
-  const [appSource, preloadSource] = await Promise.all([
+test('connection apply exposes only selection ids and one-time confirmation tokens', async () => {
+  const [appSource, preloadSource, mainSource] = await Promise.all([
     readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
-    readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8')
+    readFile(new URL('../src/preload/index.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/main/index.js', import.meta.url), 'utf8')
   ])
 
   assert.match(appSource, /showConnectionPreview/)
   assert.match(appSource, /preview\.note/)
-  assert.doesNotMatch(appSource, /applyConnection|preview\.apply/)
-  assert.doesNotMatch(preloadSource, /connection:apply|applyConnection|createLink/)
+  assert.match(appSource, /prepareConnectionApply\([\s\S]*?storageId\.value[\s\S]*?connection\.id/)
+  assert.match(appSource, /confirmConnectionApply\(token\)/)
+  assert.match(preloadSource, /connection:prepare-apply/)
+  assert.match(preloadSource, /connection:confirm-apply/)
+  assert.match(preloadSource, /connection:cancel-apply/)
+  assert.doesNotMatch(preloadSource, /sourcePath|targetPath|createLink/)
+  assert.match(mainSource, /request\.storageId !== activeStorage\?\.id/)
+  assert.match(mainSource, /const applyStorage = \{ \.\.\.activeStorage \}/)
+  assert.match(mainSource, /applyController\.prepare\([\s\S]*?applyStorage\.folderPath/)
+  assert.match(mainSource, /requestSingleInstanceLock/)
 })

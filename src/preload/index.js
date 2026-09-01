@@ -25,7 +25,11 @@ const api = Object.freeze({
       selectionId,
       name,
       openAfterCreation: openAfterCreation === true
-    })
+    }),
+  prepareConnectionApply: (storageId, connectionId) =>
+    ipcRenderer.invoke('connection:prepare-apply', { storageId, connectionId }),
+  confirmConnectionApply: (token) => ipcRenderer.invoke('connection:confirm-apply', token),
+  cancelConnectionApply: (token) => ipcRenderer.invoke('connection:cancel-apply', token)
 })
 
 contextBridge.exposeInMainWorld('yonder', api)

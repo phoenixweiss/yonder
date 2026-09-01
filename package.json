@@ -17,15 +17,16 @@
   },
   "scripts": {
     "electron:install": "install-electron --no",
-    "predev": "yarn electron:install",
+    "build:native": "node scripts/build-native.mjs",
+    "predev": "yarn electron:install && yarn build:native",
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "prestart": "yarn electron:install",
+    "build": "yarn build:native && electron-vite build",
+    "prestart": "yarn electron:install && yarn build:native",
     "start": "electron-vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test tests/shell.test.js tests/config.test.js tests/storage.test.js tests/inspection.test.js tests/connection-preview.test.js",
+    "test": "node --test tests/shell.test.js tests/config.test.js tests/storage.test.js tests/inspection.test.js tests/connection-preview.test.js tests/apply-journal.test.js tests/native-link-helper.test.js tests/connection-apply.test.js",
     "quality": "yarn lint && yarn format:check && yarn test && yarn build"
   },
   "dependencies": {

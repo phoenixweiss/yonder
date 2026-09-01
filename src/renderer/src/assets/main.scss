@@ -214,6 +214,16 @@ footer {
   color: #8c4f4f;
 }
 
+.dashboard-notice {
+  margin: 0 0 9px;
+  padding: 7px 9px;
+  color: #365d48;
+  background: #e2eee7;
+  border: 1px solid #b9d3c4;
+  border-radius: 5px;
+  font-size: 12.5px;
+}
+
 .creation-flow,
 .created-state {
   align-self: center;
@@ -653,9 +663,53 @@ code {
   border-radius: 5px;
 }
 
-.connection-preview > button {
-  min-width: 180px;
-  margin-top: 12px;
+.apply-confirmation,
+.apply-recovery {
+  margin: 9px 0 0;
+  padding: 8px 10px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 12.5px;
+}
+
+.apply-confirmation p,
+.apply-confirmation small {
+  display: block;
+  margin: 3px 0 0;
+  color: var(--neutral);
+}
+
+.apply-error {
+  padding: 7px 9px;
+  background: #f7eded;
+  border: 1px solid #dfc4c4;
+  border-radius: 5px;
+}
+
+.apply-recovery {
+  display: grid;
+  gap: 5px;
+}
+
+.apply-recovery > div {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.apply-recovery dt {
+  color: var(--neutral);
+  font-weight: 550;
+}
+
+.apply-recovery dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.preview-actions {
+  max-width: 440px;
 }
 
 footer {

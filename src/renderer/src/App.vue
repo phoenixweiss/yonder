@@ -18,6 +18,10 @@ const checking = ref(false)
 const storageId = ref('')
 const storage = ref(null)
 const selectedPreview = ref(null)
+const applyPreparation = ref(null)
+const applyError = ref({ key: '', recovery: null })
+const applyBusy = ref(false)
+const dashboardNoticeKey = ref('')
 const inspectionError = ref({ key: '', path: '', previousResults: false })
 const creation = ref({
   selectionId: '',
@@ -53,11 +57,15 @@ function showWelcome() {
   openAfterCreation.value = false
   inspectionError.value = { key: '', path: '', previousResults: false }
   selectedPreview.value = null
+  applyPreparation.value = null
+  applyError.value = { key: '', recovery: null }
+  dashboardNoticeKey.value = ''
   creation.value = { selectionId: '', folderPath: '', configPath: '', name: '' }
 }
 
 async function openStorage() {
   noticeKey.value = ''
+  dashboardNoticeKey.value = ''
   inspectionError.value = { key: '', path: '', previousResults: false }
   busy.value = true
 
@@ -68,6 +76,8 @@ async function openStorage() {
       storageId.value = result.storageId
       storage.value = result.storage
       selectedPreview.value = null
+      applyPreparation.value = null
+      applyError.value = { key: '', recovery: null }
       view.value = 'dashboard'
       return
     }
@@ -95,16 +105,114 @@ function showConnectionPreview(connection) {
   const preview = connectionPreview(connection)
   if (preview?.status !== 'ready') return
   selectedPreview.value = { connection, preview }
+  applyPreparation.value = null
+  applyError.value = { key: '', recovery: null }
   view.value = 'preview'
 }
 
-function closeConnectionPreview() {
+function connectionApplyErrorKey(status) {
+  const keys = {
+    invalidSelection: 'apply.errors.invalidSelection',
+    selectionExpired: 'apply.errors.selectionExpired',
+    unsupportedPlatform: 'apply.errors.unsupportedPlatform',
+    operationBusy: 'apply.errors.operationBusy',
+    destinationOccupied: 'apply.errors.destinationOccupied',
+    sourceMissing: 'apply.errors.sourceMissing',
+    parentsMissing: 'apply.errors.parentsMissing',
+    stateChanged: 'apply.errors.stateChanged',
+    recoveryRequired: 'apply.errors.recoveryRequired',
+    journalUnavailable: 'apply.errors.journalUnavailable',
+    journalInvalid: 'apply.errors.journalInvalid',
+    journalChanged: 'apply.errors.journalInvalid',
+    journalWriteUncertain: 'apply.errors.journalWriteUncertain',
+    creationUncertain: 'apply.errors.creationUncertain',
+    notReady: 'apply.errors.notReady'
+  }
+  return keys[status] ?? 'apply.errors.unavailable'
+}
+
+async function prepareSelectedConnectionApply() {
+  if (!selectedPreview.value || applyBusy.value) return
+  applyError.value = { key: '', recovery: null }
+  applyBusy.value = true
+  try {
+    const result = await window.yonder.prepareConnectionApply(
+      storageId.value,
+      selectedPreview.value.connection.id
+    )
+    if (result.status === 'ready') {
+      applyPreparation.value = result
+      return
+    }
+    applyError.value = {
+      key: connectionApplyErrorKey(result.status),
+      recovery: result.recovery ?? null
+    }
+  } catch {
+    applyError.value = { key: 'apply.errors.unavailable', recovery: null }
+  } finally {
+    applyBusy.value = false
+  }
+}
+
+async function confirmSelectedConnectionApply() {
+  if (!applyPreparation.value || applyBusy.value) return
+  const token = applyPreparation.value.token
+  applyError.value = { key: '', recovery: null }
+  applyBusy.value = true
+  try {
+    const result = await window.yonder.confirmConnectionApply(token)
+    applyPreparation.value = null
+    if (result.status === 'connected') {
+      if (result.storageId && result.storage) {
+        storageId.value = result.storageId
+        storage.value = result.storage
+        dashboardNoticeKey.value = 'apply.connected'
+      } else {
+        dashboardNoticeKey.value = 'apply.connectedRefreshFailed'
+      }
+      selectedPreview.value = null
+      view.value = 'dashboard'
+      return
+    }
+    applyError.value = {
+      key: connectionApplyErrorKey(result.status),
+      recovery: result.recovery ?? null
+    }
+  } catch {
+    applyPreparation.value = null
+    applyError.value = { key: 'apply.errors.unavailable', recovery: null }
+  } finally {
+    applyBusy.value = false
+  }
+}
+
+async function closeConnectionPreview() {
+  if (applyBusy.value) return
+  if (applyPreparation.value?.token) {
+    applyBusy.value = true
+    try {
+      const result = await window.yonder.cancelConnectionApply(applyPreparation.value.token)
+      if (!['cancelled', 'selectionExpired'].includes(result.status)) {
+        applyError.value = { key: connectionApplyErrorKey(result.status), recovery: null }
+        return
+      }
+    } catch {
+      applyError.value = { key: 'apply.errors.unavailable', recovery: null }
+      return
+    } finally {
+      applyBusy.value = false
+    }
+  }
   selectedPreview.value = null
+  applyPreparation.value = null
+  applyError.value = { key: '', recovery: null }
   view.value = 'dashboard'
 }
 
 async function recheckStorage() {
   inspectionError.value = { key: '', path: '', previousResults: false }
+  dashboardNoticeKey.value = ''
   checking.value = true
 
   try {
@@ -385,6 +493,9 @@ async function confirmCreation() {
         <span v-if="inspectionError.previousResults">{{ $t('inspection.previousResults') }}</span>
         <code v-if="inspectionError.path">{{ inspectionError.path }}</code>
       </p>
+      <p v-if="dashboardNoticeKey" class="dashboard-notice" role="status">
+        {{ $t(dashboardNoticeKey) }}
+      </p>
 
       <div class="inspection-summary" aria-live="polite">
         <span>{{ $t('inspection.connections') }}: {{ storage.connections.length }}</span>
@@ -475,9 +586,66 @@ async function confirmCreation() {
       <p class="preview-effect">{{ $t('preview.effect') }}</p>
       <p class="preview-unchanged">{{ $t('preview.unchanged') }}</p>
       <p class="preview-note">{{ $t('preview.note') }}</p>
-      <button type="button" class="secondary-action" @click="closeConnectionPreview">
-        {{ $t('preview.back') }}
-      </button>
+
+      <div v-if="applyPreparation" class="apply-confirmation" role="status">
+        <strong>{{ $t('apply.readyTitle') }}</strong>
+        <p>{{ $t('apply.readyText') }}</p>
+        <small
+          >{{ $t('apply.checkedAt') }} <code>{{ applyPreparation.checkedAt }}</code></small
+        >
+      </div>
+
+      <p v-if="applyError.key" class="flow-error apply-error" role="alert">
+        {{ $t(applyError.key) }}
+      </p>
+
+      <dl v-if="applyError.recovery" class="apply-recovery">
+        <div>
+          <dt>{{ $t('apply.recoveryObservation') }}</dt>
+          <dd>{{ $t(`apply.observations.${applyError.recovery.observation}`) }}</dd>
+        </div>
+        <div>
+          <dt>{{ $t('preview.source') }}</dt>
+          <dd>
+            <code>{{ applyError.recovery.sourcePath }}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ $t('preview.destination') }}</dt>
+          <dd>
+            <code>{{ applyError.recovery.targetPath }}</code>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="flow-actions preview-actions">
+        <button
+          v-if="!applyPreparation && !applyError.key"
+          type="button"
+          class="primary-action"
+          :disabled="applyBusy"
+          @click="prepareSelectedConnectionApply"
+        >
+          {{ applyBusy ? $t('apply.preparing') : $t('apply.prepare') }}
+        </button>
+        <button
+          v-if="applyPreparation"
+          type="button"
+          class="primary-action"
+          :disabled="applyBusy"
+          @click="confirmSelectedConnectionApply"
+        >
+          {{ applyBusy ? $t('apply.applying') : $t('apply.confirm') }}
+        </button>
+        <button
+          type="button"
+          class="secondary-action"
+          :disabled="applyBusy"
+          @click="closeConnectionPreview"
+        >
+          {{ applyPreparation ? $t('apply.cancel') : $t('preview.back') }}
+        </button>
+      </div>
     </section>
 
     <footer>

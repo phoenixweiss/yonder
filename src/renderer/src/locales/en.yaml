@@ -5,7 +5,7 @@ shell:
   open: Open storage…
   create: Create storage…
   hint: Opening checks connections without changing files. Creation writes only after confirmation.
-  foundation: Read-only inspection · confirmed creation
+  foundation: Safe inspection · confirmed changes
   language: Language
   systemLanguage: System default
   languageSaveFailed: Language changed for this session only. The preference could not be saved.
@@ -66,14 +66,14 @@ preview:
   destination: Destination on this computer
   effect: Yonder would create one symbolic link at the destination pointing to the source.
   unchanged: It would not move, delete, or replace files, edit yonder.yaml, or create folders.
-  note: Preview only — nothing has changed. A future apply step must inspect the current state again and ask for confirmation.
+  note: This preview is not write authority. Apply performs fresh main-process checks and asks for one final confirmation.
   open: Preview…
   back: Back to storage
   nextStep: 'Next step:'
   operations:
     createLink: Create one symbolic link
   reasons:
-    ready: Review the proposed link before any future apply step.
+    ready: Review the proposed link, then prepare a separately confirmed Apply.
     connected: Keep the existing link; no change is proposed.
     targetOccupied: Resolve the occupied destination manually, then check again. Nothing will be replaced.
     targetMismatch: Review the link that points elsewhere, then check again. Nothing will be replaced.
@@ -84,3 +84,35 @@ preview:
     sourceUnsafe: Use a direct regular file or folder inside storage, not a symbolic link.
     sourceUnsupported: The source must be a regular file or folder.
     inspectionFailed: Resolve the inspection problem, then check again. No change is proposed.
+apply:
+  prepare: Prepare Apply
+  preparing: Checking again…
+  readyTitle: Fresh checks completed
+  readyText: The verified destination folder is held open. Confirm once to create exactly this symbolic link.
+  checkedAt: 'Checked at:'
+  confirm: Create this link
+  applying: Creating link…
+  cancel: Cancel Apply
+  connected: The symbolic link was created and independently checked.
+  connectedRefreshFailed: The link was created, but the dashboard could not be refreshed. Check the storage again; do not repeat Apply.
+  recoveryObservation: Recorded operation observation
+  observations:
+    absent: No link is visible at the recorded destination. The outcome remains uncertain; do not retry automatically.
+    conflict: Another entry is visible at the recorded destination. Nothing will be replaced.
+    stateChanged: The recorded files or folders changed. Automatic recovery is blocked.
+  errors:
+    invalidSelection: This storage selection has expired. Open the folder again.
+    selectionExpired: This one-time confirmation has expired. Return to the storage and prepare Apply again.
+    unsupportedPlatform: Apply is currently available only on verified macOS builds.
+    operationBusy: Another link operation is still active. Wait and try again.
+    destinationOccupied: The destination became occupied. Nothing was replaced; check the storage again.
+    sourceMissing: The source is no longer available. Nothing was created; check the storage again.
+    parentsMissing: The destination folder is missing. Yonder will not create folders.
+    stateChanged: The configuration or filesystem changed during preparation. Nothing was created; check again.
+    recoveryRequired: A previous operation has an unresolved outcome. Yonder will not retry it automatically.
+    journalUnavailable: The private local operation journal is unavailable, so Apply is disabled.
+    journalInvalid: The local operation journal changed or is invalid, so Apply is disabled.
+    journalWriteUncertain: Yonder could not prove that the operation intent was saved. No link command was sent.
+    creationUncertain: The link command may have been delivered, but the final outcome could not be proven. Do not retry; reopen Apply to inspect the recorded operation.
+    notReady: This connection is no longer ready for Apply. Check the storage again.
+    unavailable: Yonder could not prepare or finish Apply safely. Check the storage before trying again.

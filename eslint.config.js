@@ -7,7 +7,7 @@ export default [
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
   {
-    files: ['**/*.js', '**/*.vue'],
+    files: ['**/*.{js,mjs}', '**/*.vue'],
     languageOptions: { globals: globals.node },
     rules: {
       'vue/multi-word-component-names': 'off',
