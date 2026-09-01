@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 const prefix = '--yonder-system-languages='
 let systemLanguages = []
@@ -13,5 +13,12 @@ try {
   // An unavailable system preference falls back to English in the renderer.
 }
 
-// Expose language data only. Filesystem capabilities arrive in later, reviewed steps.
-contextBridge.exposeInMainWorld('yonder', { systemLanguages })
+const api = Object.freeze({
+  systemLanguages,
+  chooseStorageFolderForCreation: (language) =>
+    ipcRenderer.invoke('storage:choose-for-creation', language === 'ru' ? 'ru' : 'en'),
+  createStorageConfig: (selectionId, name) =>
+    ipcRenderer.invoke('storage:create-config', { selectionId, name })
+})
+
+contextBridge.exposeInMainWorld('yonder', api)

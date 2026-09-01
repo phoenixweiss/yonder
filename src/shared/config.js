@@ -1,4 +1,4 @@
-import { isAlias, parseDocument, visit } from 'yaml'
+import { isAlias, parseDocument, stringify, visit } from 'yaml'
 
 export const CONFIG_FILENAME = 'yonder.yaml'
 export const MAX_CONFIG_BYTES = 256 * 1024
@@ -35,16 +35,18 @@ function keysOnly(value, allowedKeys, field) {
   )
 }
 
-function requireText(value, field) {
-  requireValue(
+export function isValidStorageName(value) {
+  return (
     typeof value === 'string' &&
-      value.length > 0 &&
-      value.length <= 240 &&
-      value === value.trim() &&
-      !hasControlCharacters(value),
-    'invalidText',
-    field
+    value.length > 0 &&
+    value.length <= 240 &&
+    value === value.trim() &&
+    !hasControlCharacters(value)
   )
+}
+
+function requireText(value, field) {
+  requireValue(isValidStorageName(value), 'invalidText', field)
 }
 
 export function isSafeRelativePath(value) {
@@ -148,4 +150,9 @@ export function parseConfig(source) {
   })
 
   return { version: 1, name: data.name, connections }
+}
+
+export function createEmptyConfigSource(name) {
+  requireText(name, 'name')
+  return stringify({ version: 1, name, connections: [] }, { lineWidth: 0 })
 }

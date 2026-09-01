@@ -5,8 +5,10 @@ import { stringify } from 'yaml'
 import {
   CONFIG_FILENAME,
   ConfigError,
+  createEmptyConfigSource,
   MAX_CONFIG_BYTES,
   MAX_CONNECTIONS,
+  isValidStorageName,
   parseConfig,
   isSafeRelativePath
 } from '../src/shared/config.js'
@@ -38,6 +40,21 @@ test('accepts the documented example and preserves platform-specific targets', a
 test('accepts an empty connection list and ordinary paths with spaces or Cyrillic', () => {
   assert.deepEqual(parseConfig(stringify(sampleConfig([]))).connections, [])
   assert.equal(isSafeRelativePath('Мои настройки/Editor settings'), true)
+})
+
+test('creates the smallest valid configuration from a storage name', () => {
+  const source = createEmptyConfigSource('Мои файлы')
+  assert.deepEqual(parseConfig(source), {
+    version: 1,
+    name: 'Мои файлы',
+    connections: []
+  })
+  assert.equal(isValidStorageName('Мои файлы'), true)
+
+  for (const name of ['', ' name', 'name ', 'x'.repeat(241), 'bad\0name']) {
+    assert.equal(isValidStorageName(name), false)
+    assert.throws(() => createEmptyConfigSource(name), { code: 'invalidText' })
+  }
 })
 
 for (const value of [

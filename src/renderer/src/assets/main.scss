@@ -50,10 +50,15 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
 .app-shell {
   height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--base-200);
 }
 
@@ -85,7 +90,9 @@ button {
   align-self: center;
   justify-self: center;
   width: min(100% - 48px, 500px);
+  max-height: 100%;
   padding: 18px 0 8px;
+  overflow-y: auto;
   text-align: center;
 }
 
@@ -134,7 +141,9 @@ button {
   margin: 0 auto 13px;
 }
 
-.storage-actions button {
+.storage-actions button,
+.flow-actions button,
+.created-state > button {
   min-height: 40px;
   padding: 8px 12px;
   border-radius: 5px;
@@ -191,6 +200,143 @@ footer {
   margin: 7px auto 0;
 }
 
+.creation-flow,
+.created-state {
+  align-self: center;
+  justify-self: center;
+  width: min(100% - 48px, 540px);
+  max-height: 100%;
+  padding: 18px 0;
+  overflow-y: auto;
+}
+
+.creation-flow {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.creation-flow h2,
+.created-state h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 550;
+  letter-spacing: -0.4px;
+}
+
+.creation-flow > .intro {
+  margin: 3px 0 10px;
+}
+
+.creation-preview {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 9px;
+  padding: 8px 11px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.creation-preview div {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.creation-preview dt,
+.creation-flow label {
+  color: var(--neutral);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
+.creation-preview dd {
+  min-width: 0;
+  margin: 0;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.creation-flow form {
+  display: grid;
+}
+
+.creation-flow label {
+  margin-bottom: 5px;
+}
+
+.creation-flow input {
+  width: 100%;
+  min-height: 39px;
+  padding: 7px 10px;
+  color: var(--content);
+  background: #ffffff;
+  border: 1px solid var(--secondary-border);
+  border-radius: 5px;
+  font: inherit;
+}
+
+.creation-flow input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.creation-effect {
+  margin: 6px 0 0;
+  color: var(--neutral);
+  font-size: 12.5px;
+}
+
+.flow-error {
+  margin: 7px 0 0;
+  color: #8c4f4f;
+  font-size: 12.5px;
+}
+
+.flow-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.created-state {
+  text-align: center;
+}
+
+.success-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 12px;
+  color: #ffffff;
+  background: #5c8a72;
+  border-radius: 50%;
+  font-size: 24px;
+}
+
+.created-state .intro {
+  margin-bottom: 10px;
+}
+
+.created-path {
+  margin: 0;
+  padding: 9px 12px;
+  background: var(--base-100);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.created-state > button {
+  min-width: 180px;
+  margin-top: 16px;
+}
+
 footer {
   display: flex;
   align-items: center;
@@ -240,6 +386,11 @@ footer {
 
   .storage-actions {
     grid-template-columns: 1fr;
+  }
+
+  .creation-flow,
+  .created-state {
+    width: min(100% - 32px, 540px);
   }
 
   footer {

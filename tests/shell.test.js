@@ -11,6 +11,11 @@ function collectLeafPaths(value, prefix = '') {
     .flatMap((key) => collectLeafPaths(value[key], prefix ? `${prefix}.${key}` : key))
 }
 
+function collectLeafValues(value) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return [value]
+  return Object.values(value).flatMap(collectLeafValues)
+}
+
 test('English and Russian interface resources have the same complete structure', async () => {
   const translations = await Promise.all(
     ['en', 'ru'].map(async (language) => {
@@ -31,7 +36,7 @@ test('English and Russian interface resources have the same complete structure',
       canonicalPaths,
       `${language}.yaml must match ${canonicalLanguage}.yaml`
     )
-    for (const value of Object.values(translation.shell)) {
+    for (const value of collectLeafValues(translation)) {
       assert.equal(typeof value, 'string')
       assert.ok(value.trim())
     }

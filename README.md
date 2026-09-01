@@ -19,14 +19,16 @@ own cloud, account, server, or telemetry.
 
 ## First milestone
 
-The first functional milestone stays deliberately small and read-only:
+The first connection-inspection milestone stays deliberately small and read-only:
 
 1. Open an existing storage.
 2. Show every storage path and computer path directly.
 3. Check connection state without changing files.
 
-Creating or changing `yonder.yaml`, previewing filesystem actions, creating links,
-and resolving conflicts will follow as separate, explicitly confirmed steps.
+Creating a new empty `yonder.yaml` is available as a separate flow: Yonder shows
+the selected folder, storage name, and exact new file before asking for confirmation.
+Changing a configuration, previewing filesystem actions, creating links, and
+resolving conflicts will follow as separate, explicitly confirmed steps.
 
 ## Configuration
 
@@ -34,6 +36,8 @@ and resolving conflicts will follow as separate, explicitly confirmed steps.
 storage folder; targets are home-relative paths for macOS, Linux, or Windows.
 Unknown fields, unsafe paths, duplicate identifiers, and overlapping targets are
 rejected before any filesystem action. See the [fictional example](examples/yonder.yaml).
+When creating a storage, Yonder writes only a new `yonder.yaml` with an empty
+connection list. It uses exclusive creation and never replaces an existing file.
 
 ## Technical direction
 

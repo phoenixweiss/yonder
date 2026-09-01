@@ -14,6 +14,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - A compact first-launch foundation with separate Open and Create storage actions.
 - Synchronized English and Russian interface resources with English fallback.
 - A strict, versioned `yonder.yaml` contract with safe cross-platform path validation.
+- An explicitly confirmed storage-creation flow that writes only a new `yonder.yaml`.
 
 ### Changed
 

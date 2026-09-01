@@ -1,7 +1,10 @@
-import { app, BrowserWindow, session } from 'electron'
+import { randomUUID } from 'node:crypto'
+import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { fileURLToPath } from 'node:url'
+import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
 
 let mainWindow
+let pendingCreation
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 
 if (devUrl) {
@@ -39,14 +42,78 @@ function createWindow() {
   mainWindow.on('ready-to-show', () => mainWindow.show())
   mainWindow.on('closed', () => {
     mainWindow = undefined
+    pendingCreation = undefined
   })
 
   if (devUrl) mainWindow.loadURL(devUrl)
   else mainWindow.loadFile(fileURLToPath(new URL('../renderer/index.html', import.meta.url)))
 }
 
+function isTrustedIpcEvent(event) {
+  return event.sender === mainWindow?.webContents && event.senderFrame === event.sender.mainFrame
+}
+
+function installStorageHandlers() {
+  ipcMain.handle('storage:choose-for-creation', async (event, language) => {
+    if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
+    pendingCreation = undefined
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title:
+        language === 'ru'
+          ? 'Выберите папку для хранилища Yonder'
+          : 'Choose a folder for the Yonder storage',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (result.canceled || result.filePaths.length !== 1) return { status: 'cancelled' }
+
+    try {
+      const preview = await inspectStorageDirectory(result.filePaths[0])
+      if (preview.configExists) return { status: 'configExists', ...preview }
+
+      pendingCreation = { id: randomUUID(), folderPath: preview.folderPath }
+      return { status: 'ready', selectionId: pendingCreation.id, ...preview }
+    } catch {
+      return { status: 'unavailable' }
+    }
+  })
+
+  ipcMain.handle('storage:create-config', async (event, request) => {
+    if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
+    if (
+      !request ||
+      typeof request.selectionId !== 'string' ||
+      typeof request.name !== 'string' ||
+      request.selectionId !== pendingCreation?.id
+    ) {
+      return { status: 'invalidSelection' }
+    }
+
+    try {
+      const result = await createStorageConfig(pendingCreation.folderPath, request.name)
+      pendingCreation = undefined
+      return {
+        status: 'created',
+        folderPath: result.folderPath,
+        configPath: result.configPath,
+        name: result.name
+      }
+    } catch (error) {
+      if (error instanceof StorageCreationError && error.code === 'invalidName') {
+        return { status: 'invalidName' }
+      }
+      pendingCreation = undefined
+      if (error instanceof StorageCreationError && error.code === 'configExists') {
+        return { status: 'configExists' }
+      }
+      return { status: 'unavailable' }
+    }
+  })
+}
+
 app.whenReady().then(() => {
   app.setName('Yonder')
+  installStorageHandlers()
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
     callback(false)
   })

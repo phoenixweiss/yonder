@@ -4,10 +4,29 @@ shell:
   intro: Open an existing Yonder storage or prepare a new one in an ordinary folder.
   open: Open storage…
   create: Create storage…
-  hint: No files are accessed until the corresponding step is implemented and reviewed.
+  hint: Creation writes only a new configuration after an explicit confirmation.
   openNotice: Opening an existing storage will be added in the next read-only step. Nothing changed.
-  createNotice: Creating yonder.yaml will be added after its format is defined. Nothing changed.
-  foundation: Interface foundation · no file access
+  foundation: Safe configuration creation
   language: Language
   systemLanguage: System default
   languageSaveFailed: Language changed for this session only. The preference could not be saved.
+creation:
+  title: Create a storage
+  intro: Review the selected folder and choose the name stored in its configuration.
+  folder: Folder
+  configFile: New file
+  name: Storage name
+  effect: Yonder will create only this new yonder.yaml. It will not move files, create links, or replace anything.
+  confirm: Create yonder.yaml
+  creating: Creating…
+  selecting: Choosing…
+  back: Back
+  chooseDifferent: Choose a different folder…
+  invalidName: Enter a name without leading or trailing spaces.
+  invalidSelection: This folder selection has expired. Choose the folder again.
+  alreadyExists: This folder already contains yonder.yaml. Yonder will not replace it.
+  unavailable: Yonder could not prepare or create the configuration. No other files were changed.
+  createdTitle: Storage created
+  createdIntro: The empty configuration is ready.
+  createdEffect: No files were moved and no links were created.
+  done: Done
