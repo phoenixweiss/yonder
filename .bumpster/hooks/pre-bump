@@ -11,4 +11,4 @@ cd "$project_root"
 corepack yarn quality
 node scripts/prepare-release-changelog.mjs
 git diff --check
-git add CHANGELOG.md
+git add CHANGELOG.md README.md README_RU.md

@@ -8,6 +8,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Release preparation now updates the current-download links in both READMEs and uses the
+  local release date alongside VERSION, package.json, and changelog metadata.
+
 ## [0.1.3] - 2026-09-02
 
 ### Changed

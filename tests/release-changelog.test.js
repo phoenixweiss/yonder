@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { prepareChangelog } from '../scripts/prepare-release-changelog.mjs'
+import {
+  localReleaseDate,
+  prepareChangelog,
+  prepareReadme
+} from '../scripts/prepare-release-changelog.mjs'
 
 const repositoryUrl = 'https://github.com/example/yonder'
 
@@ -49,4 +53,22 @@ test('rejects empty notes and stale comparison metadata', () => {
     () => prepareChangelog(fixture().replace('v0.1.2...HEAD', 'v0.1.1...HEAD'), options),
     /comparison link/
   )
+})
+
+test('updates one current-release link in either README language', () => {
+  const options = {
+    previousVersion: '0.1.2',
+    nextVersion: '0.1.3',
+    repositoryUrl
+  }
+  const english = `Current: [Yonder 0.1.2](${repositoryUrl}/releases/tag/v0.1.2) for macOS.`
+  const russian = `Скачать [Yonder 0.1.2](${repositoryUrl}/releases/tag/v0.1.2) для macOS.`
+
+  assert.match(prepareReadme(english, options), /Yonder 0\.1\.3.*tag\/v0\.1\.3/)
+  assert.match(prepareReadme(russian, options), /Yonder 0\.1\.3.*tag\/v0\.1\.3/)
+  assert.throws(() => prepareReadme('No release link.', options), /current-release link/)
+})
+
+test('formats the release date in local calendar time', () => {
+  assert.equal(localReleaseDate(new Date(2026, 8, 3, 0, 30)), '2026-09-03')
 })

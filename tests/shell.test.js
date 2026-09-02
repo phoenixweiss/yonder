@@ -195,7 +195,7 @@ test('Bumpster coordinates version, changelog, and quality checks', async () => 
   assert.match(config, /AFTER_BUMP_BRANCH="dev"/)
   assert.match(hook, /corepack yarn quality/)
   assert.match(hook, /prepare-release-changelog\.mjs/)
-  assert.match(hook, /git add CHANGELOG\.md/)
+  assert.match(hook, /git add CHANGELOG\.md README\.md README_RU\.md/)
 })
 
 test('public project materials foreground the external synchronization boundary', async () => {

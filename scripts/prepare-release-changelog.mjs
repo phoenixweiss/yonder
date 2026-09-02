@@ -14,6 +14,29 @@ function occurrences(text, value) {
   return text.split(value).length - 1
 }
 
+export function localReleaseDate(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function prepareReadme(
+  readme,
+  { previousVersion, nextVersion, repositoryUrl = REPOSITORY_URL }
+) {
+  requireValue(previousVersion, VERSION_PATTERN, 'Previous version')
+  requireValue(nextVersion, VERSION_PATTERN, 'Next version')
+  const previousLink = `[Yonder ${previousVersion}](${repositoryUrl}/releases/tag/v${previousVersion})`
+  if (occurrences(readme, previousLink) !== 1) {
+    throw new Error('README current-release link does not match the current version.')
+  }
+  return readme.replace(
+    previousLink,
+    `[Yonder ${nextVersion}](${repositoryUrl}/releases/tag/v${nextVersion})`
+  )
+}
+
 export function prepareChangelog(
   changelog,
   { previousVersion, nextVersion, releaseDate, repositoryUrl = REPOSITORY_URL }
@@ -57,17 +80,23 @@ export function prepareChangelog(
 async function main() {
   const previousVersion = process.env.BUMPSTER_PREV_VERSION ?? ''
   const nextVersion = process.env.BUMPSTER_NEW_VERSION ?? ''
-  const releaseDate = process.env.BUMPSTER_RELEASE_DATE ?? new Date().toISOString().slice(0, 10)
+  const releaseDate = process.env.BUMPSTER_RELEASE_DATE ?? localReleaseDate()
   const projectRoot = process.cwd()
   const versionFile = path.join(projectRoot, 'VERSION')
   const packageFile = path.join(projectRoot, 'package.json')
   const changelogFile = path.join(projectRoot, 'CHANGELOG.md')
+  const readmeFile = path.join(projectRoot, 'README.md')
+  const readmeRuFile = path.join(projectRoot, 'README_RU.md')
 
-  const [version, packageText, changelog, details] = await Promise.all([
+  const [version, packageText, changelog, readme, readmeRu, ...details] = await Promise.all([
     readFile(versionFile, 'utf8'),
     readFile(packageFile, 'utf8'),
     readFile(changelogFile, 'utf8'),
-    stat(changelogFile)
+    readFile(readmeFile, 'utf8'),
+    readFile(readmeRuFile, 'utf8'),
+    stat(changelogFile),
+    stat(readmeFile),
+    stat(readmeRuFile)
   ])
   const packageJson = JSON.parse(packageText)
   if (version.trim() !== previousVersion || packageJson.version !== previousVersion) {
@@ -79,12 +108,22 @@ async function main() {
     nextVersion,
     releaseDate
   })
-  const temporaryFile = path.join(projectRoot, `.CHANGELOG.${process.pid}.${Date.now()}.tmp`)
+  const updatedReadme = prepareReadme(readme, { previousVersion, nextVersion })
+  const updatedReadmeRu = prepareReadme(readmeRu, { previousVersion, nextVersion })
+  const files = [changelogFile, readmeFile, readmeRuFile]
+  const contents = [updated, updatedReadme, updatedReadmeRu]
+  const temporaryFiles = files.map((file) =>
+    path.join(projectRoot, `.${path.basename(file)}.${process.pid}.${Date.now()}.tmp`)
+  )
   try {
-    await writeFile(temporaryFile, updated, { mode: details.mode })
-    await rename(temporaryFile, changelogFile)
+    await Promise.all(
+      temporaryFiles.map((file, index) =>
+        writeFile(file, contents[index], { mode: details[index].mode })
+      )
+    )
+    for (const [index, file] of files.entries()) await rename(temporaryFiles[index], file)
   } finally {
-    await rm(temporaryFile, { force: true })
+    await Promise.all(temporaryFiles.map((file) => rm(file, { force: true })))
   }
 }
 
