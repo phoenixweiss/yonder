@@ -76,10 +76,16 @@ button:disabled {
 }
 
 .topbar h1 {
+  display: flex;
+  align-items: center;
   margin: 0;
-  font-size: 23px;
-  font-weight: 550;
-  letter-spacing: -0.6px;
+  line-height: 1;
+}
+
+.topbar h1 img {
+  display: block;
+  width: 116px;
+  height: auto;
 }
 
 .tagline {

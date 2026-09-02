@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 512" role="img" aria-labelledby="title description" style="color:#2166f3">
+  <title id="title">Yonder horizontal logo</title>
+  <desc id="description">The approved flat passage mark paired with the Yonder wordmark.</desc>
+  <metadata>
+    Primary horizontal lockup.
+    Mark geometry: normalized orthographic isometric cube from yonder-mark-flat.svg.
+    Wordmark source: Inter 4.1, weight 560, optical size 32, converted to outlines.
+    Wordmark tracking: -20 font units between glyphs.
+    Change the root color property to recolor the complete lockup.
+  </metadata>
+
+  <defs>
+    <path id="lockup-rear-frame" d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 512 512)"
+      fill-rule="evenodd"/>
+    <path id="lockup-front-frame" d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 867.0704 717)"
+      fill-rule="evenodd"/>
+    <path id="lockup-passage-shell" d="
+      M302.5085 391.05
+      L366.4211 354.15
+      L721.4915 559.15
+      L721.4915 632.95
+      L657.5789 669.85
+      L302.5085 464.85 Z"/>
+    <path id="lockup-passage-left-face" d="
+      M302.5085 391.05
+      L366.4211 354.15
+      L366.4211 427.95
+      L302.5085 464.85 Z"/>
+    <path id="lockup-passage-right-face" d="
+      M657.5789 596.05
+      L721.4915 559.15
+      L721.4915 632.95
+      L657.5789 669.85 Z"/>
+
+    <clipPath id="lockup-passage-shell-clip"><use href="#lockup-passage-shell"/></clipPath>
+    <clipPath id="lockup-passage-left-clip"><use href="#lockup-passage-left-face"/></clipPath>
+    <clipPath id="lockup-passage-right-clip"><use href="#lockup-passage-right-face"/></clipPath>
+
+    <g id="lockup-passage-shape" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter">
+      <use href="#lockup-passage-shell" clip-path="url(#lockup-passage-shell-clip)"/>
+      <use href="#lockup-passage-left-face" clip-path="url(#lockup-passage-left-clip)"/>
+      <use href="#lockup-passage-right-face" clip-path="url(#lockup-passage-right-clip)"/>
+    </g>
+
+    <mask id="lockup-frames-minus-passage" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <use href="#lockup-passage-shape" color="#000"/>
+    </mask>
+    <mask id="lockup-passage-minus-frames" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <use href="#lockup-rear-frame" fill="#000"/>
+      <use href="#lockup-front-frame" fill="#000"/>
+    </mask>
+
+    <g id="lockup-mark">
+      <g fill="currentColor" mask="url(#lockup-frames-minus-passage)">
+        <use href="#lockup-rear-frame"/>
+        <use href="#lockup-front-frame"/>
+      </g>
+      <use href="#lockup-passage-shape" mask="url(#lockup-passage-minus-frames)"/>
+    </g>
+
+    <!-- Inter 4.1 outlines, wght 560, opsz 32. -->
+    <g id="lockup-wordmark">
+      <path d="M564 0V583L14 1490H299L574 1026Q613 960 650 894Q687 828 724 761H652Q688 828 724.5 894Q761 960 800 1026L1070 1490H1354L808 583V0Z"/>
+      <path d="M579 -24Q426 -24 310 45.5Q194 115 129.5 239Q65 363 65 527Q65 691 129.5 815.5Q194 940 310 1010Q426 1080 579 1080Q733 1080 849 1010Q965 940 1029.5 815.5Q1094 691 1094 527Q1094 363 1029.5 239Q965 115 849 45.5Q733 -24 579 -24ZM579 175Q664 175 726 218Q788 261 821.5 340Q855 419 855 527Q855 636 821.5 715Q788 794 726 837.5Q664 881 579 881Q495 881 433 837.5Q371 794 337 715Q303 636 303 527Q303 418 337 339.5Q371 261 433 218Q495 175 579 175Z" transform="translate(1125)"/>
+      <path d="M351 601V0H114V1056H346V790H297Q348 931 441 1004Q534 1077 669 1077Q779 1077 864.5 1029.5Q950 982 999 889Q1048 796 1048 659V0H811V624Q811 745 753.5 807Q696 869 591 869Q523 869 468.5 841Q414 813 382.5 754Q351 695 351 601Z" transform="translate(2264)"/>
+      <path d="M522 -21Q385 -21 281.5 48Q178 117 121.5 241Q65 365 65 529Q65 691 122 815Q179 939 282 1008Q385 1077 521 1077Q590 1077 650 1058Q710 1039 758.5 1001Q807 963 841 905H842V1490H1079V0H846V161H845Q811 100 761.5 59.5Q712 19 651.5 -1Q591 -21 522 -21ZM575 178Q660 178 723.5 221.5Q787 265 821.5 344Q856 423 856 529Q856 635 821.5 713.5Q787 792 723.5 835.5Q660 879 575 879Q494 879 433 838.5Q372 798 337.5 720Q303 642 303 529Q303 416 337.5 337.5Q372 259 433 218.5Q494 178 575 178Z" transform="translate(3406)"/>
+      <path d="M575 -24Q417 -24 302.5 47Q188 118 126.5 242.5Q65 367 65 527Q65 688 128.5 813Q192 938 305 1009Q418 1080 564 1080Q678 1080 770 1040Q862 1000 928 926.5Q994 853 1029.5 752.5Q1065 652 1065 530V465H163V634H945L840 586Q840 679 806.5 747Q773 815 712 852Q651 889 567 889Q485 889 424 852Q363 815 329.5 747Q296 679 296 586V484Q296 390 329 318Q362 246 425.5 206Q489 166 580 166Q645 166 695.5 186Q746 206 780 241.5Q814 277 828 324H1051Q1031 221 964.5 143Q898 65 797.5 20.5Q697 -24 575 -24Z" transform="translate(4579)"/>
+      <path d="M114 0V1056H342V883H345Q374 972 436.5 1019.5Q499 1067 601 1067Q625 1067 646 1066Q667 1065 681 1063V850Q668 852 635 855Q602 858 565 858Q506 858 457 831Q408 804 379.5 748.5Q351 693 351 609V0Z" transform="translate(5685)"/>
+    </g>
+  </defs>
+
+  <svg x="24" y="86" width="340" height="340" viewBox="0 0 1024 1024" overflow="visible">
+    <use href="#lockup-mark"/>
+  </svg>
+  <g fill="currentColor" transform="translate(350 328) scale(0.105 -0.105)">
+    <use href="#lockup-wordmark"/>
+  </g>
+</svg>

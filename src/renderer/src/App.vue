@@ -7,6 +7,7 @@ import {
   suggestConnectionId
 } from '../../shared/connection-draft.js'
 import { buildConnectionPreview } from '../../shared/connection-preview.js'
+import brandLockupUrl from './assets/yonder-lockup.svg'
 import i18next, {
   changeLanguagePreference,
   languagePreference,
@@ -816,7 +817,7 @@ async function confirmCreation() {
   <main class="app-shell" aria-label="Yonder">
     <header class="topbar">
       <span class="tagline">{{ $t('shell.tagline') }}</span>
-      <h1>Yonder</h1>
+      <h1><img :src="brandLockupUrl" alt="Yonder" /></h1>
     </header>
 
     <section v-if="view === 'welcome'" class="welcome" aria-labelledby="welcome-title">

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Yonder app icon master</title>
+  <desc id="description">The Yonder passage mark centered on a calm light blue square app-icon background.</desc>
+  <metadata>
+    Rounded 1024 x 1024 app-icon master with transparent macOS-safe corners.
+    Mark geometry derives from yonder-mark-flat.svg and is optically adjusted for icon sizes.
+    Foreground scale: 0.88 about canvas center. Passage stroke and XOR cut: 14.
+  </metadata>
+
+  <defs>
+    <clipPath id="app-icon-mask">
+      <rect width="1024" height="1024" rx="230.4"/>
+    </clipPath>
+    <linearGradient id="icon-background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f9fbfe"/>
+      <stop offset="0.52" stop-color="#e9eff7"/>
+      <stop offset="1" stop-color="#d8e3f1"/>
+    </linearGradient>
+    <radialGradient id="icon-highlight" cx="34%" cy="27%" r="76%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.82"/>
+      <stop offset="0.48" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <path id="icon-rear-frame" d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 512 512)"
+      fill-rule="evenodd"/>
+    <path id="icon-front-frame" d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 867.0704 717)"
+      fill-rule="evenodd"/>
+    <path id="icon-passage-shell" d="
+      M302.5085 391.05
+      L366.4211 354.15
+      L721.4915 559.15
+      L721.4915 632.95
+      L657.5789 669.85
+      L302.5085 464.85 Z"/>
+    <path id="icon-passage-left-face" d="
+      M302.5085 391.05
+      L366.4211 354.15
+      L366.4211 427.95
+      L302.5085 464.85 Z"/>
+    <path id="icon-passage-right-face" d="
+      M657.5789 596.05
+      L721.4915 559.15
+      L721.4915 632.95
+      L657.5789 669.85 Z"/>
+
+    <clipPath id="icon-passage-shell-clip">
+      <use href="#icon-passage-shell"/>
+    </clipPath>
+    <clipPath id="icon-passage-left-clip">
+      <use href="#icon-passage-left-face"/>
+    </clipPath>
+    <clipPath id="icon-passage-right-clip">
+      <use href="#icon-passage-right-face"/>
+    </clipPath>
+
+    <!-- Inward-only outlines keep the exact sharp face vertices without
+         the outward spikes produced by a centered miter join. -->
+    <g id="icon-passage-shape" fill="none" stroke="currentColor" stroke-width="28" stroke-linejoin="miter">
+      <use href="#icon-passage-shell" clip-path="url(#icon-passage-shell-clip)"/>
+      <use href="#icon-passage-left-face" clip-path="url(#icon-passage-left-clip)"/>
+      <use href="#icon-passage-right-face" clip-path="url(#icon-passage-right-clip)"/>
+    </g>
+
+    <mask id="icon-frames-minus-passage" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <use href="#icon-passage-shape" color="#000"/>
+    </mask>
+    <mask id="icon-passage-minus-frames" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <use href="#icon-rear-frame" fill="#000"/>
+      <use href="#icon-front-frame" fill="#000"/>
+    </mask>
+
+    <g id="icon-mark" color="#2166f3">
+      <g fill="currentColor" mask="url(#icon-frames-minus-passage)">
+        <use href="#icon-rear-frame"/>
+        <use href="#icon-front-frame"/>
+      </g>
+      <use href="#icon-passage-shape" mask="url(#icon-passage-minus-frames)"/>
+    </g>
+  </defs>
+
+  <g clip-path="url(#app-icon-mask)">
+    <rect width="1024" height="1024" fill="url(#icon-background)"/>
+    <rect width="1024" height="1024" fill="url(#icon-highlight)"/>
+
+    <g transform="translate(61.44 61.44) scale(0.88)">
+      <use href="#icon-mark"/>
+    </g>
+  </g>
+</svg>

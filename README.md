@@ -1,5 +1,7 @@
 # Yonder
 
+<p align="center"><img src="docs/brand/yonder-lockup.svg" alt="Yonder" width="420"></p>
+
 Keep it there. Use it here.
 
 [RUSSIAN VERSION](README_RU.md)
@@ -106,6 +108,10 @@ corepack yarn quality
 ```
 
 `corepack yarn dev` opens the Electron window and should be run deliberately.
+
+Approved identity masters and application-icon exports live in
+[`docs/brand`](docs/brand). Runtime and future packaging inputs are kept in
+[`resources`](resources).
 
 See the [changelog](CHANGELOG.md) for user-visible changes.
 

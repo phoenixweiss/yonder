@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description" style="color:#2166f3">
+  <title id="title">Yonder flat passage mark</title>
+  <desc id="description">Two solid square endpoints connected by the negative-space outline of a square-section passage.</desc>
+  <metadata>
+    Simplified one-color companion to yonder-mark-isometric.svg.
+    Geometry is defined in a normalized 100 x 100 x 100 cube.
+    Frames occupy the opposite outer planes at y=0 and y=100.
+    Frame outer size: 100 x 100. Frame inset: 18.
+    Connector: x=41..59, y=0..100, z=41..59.
+    Projection: orthographic isometric, scale=4.1, axes at 30 degrees.
+    Connector treatment: one-color outline with boolean inversion at frame crossings.
+    Change the root color property to recolor the complete mark.
+  </metadata>
+
+  <defs>
+    <path id="rear-frame-shape" d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 512 512)"
+      fill-rule="evenodd"/>
+    <path id="front-frame-shape" d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 867.0704 717)"
+      fill-rule="evenodd"/>
+
+    <path id="passage-shell" d="
+      M302.5085 391.05
+      L366.4211 354.15
+      L721.4915 559.15
+      L721.4915 632.95
+      L657.5789 669.85
+      L302.5085 464.85 Z"/>
+    <path id="passage-left-face" d="
+      M302.5085 391.05
+      L366.4211 354.15
+      L366.4211 427.95
+      L302.5085 464.85 Z"/>
+    <path id="passage-right-face" d="
+      M657.5789 596.05
+      L721.4915 559.15
+      L721.4915 632.95
+      L657.5789 669.85 Z"/>
+
+    <clipPath id="passage-shell-clip"><use href="#passage-shell"/></clipPath>
+    <clipPath id="passage-left-clip"><use href="#passage-left-face"/></clipPath>
+    <clipPath id="passage-right-clip"><use href="#passage-right-face"/></clipPath>
+
+    <g id="passage-shape" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter">
+      <use href="#passage-shell" clip-path="url(#passage-shell-clip)"/>
+      <use href="#passage-left-face" clip-path="url(#passage-left-clip)"/>
+      <use href="#passage-right-face" clip-path="url(#passage-right-clip)"/>
+    </g>
+
+    <!-- Cut the same connector geometry out of both frames for an exact XOR. -->
+    <mask id="frames-minus-passage" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <use href="#passage-shape" color="#000"/>
+    </mask>
+
+    <!-- Hide the positive connector line wherever a frame exists: together
+         with the mask above this produces a true background-independent XOR. -->
+    <mask id="passage-minus-frames" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <use href="#rear-frame-shape" fill="#000"/>
+      <use href="#front-frame-shape" fill="#000"/>
+    </mask>
+  </defs>
+
+  <!--
+    Projection of a world point (x,y,z):
+      screenX = 512 + 4.1 * cos(30deg) * (y - x)
+      screenY = 512 + 4.1 * 0.5 * (x + y - 100) - 4.1 * (z - 50)
+  -->
+
+  <g id="endpoints" fill="currentColor" mask="url(#frames-minus-passage)">
+    <use href="#rear-frame-shape"/>
+    <use href="#front-frame-shape"/>
+  </g>
+
+  <use id="passage-outline" href="#passage-shape" mask="url(#passage-minus-frames)"/>
+</svg>

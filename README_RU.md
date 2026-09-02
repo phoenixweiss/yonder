@@ -1,5 +1,7 @@
 # Yonder
 
+<p align="center"><img src="docs/brand/yonder-lockup.svg" alt="Yonder" width="420"></p>
+
 Keep it there. Use it here.
 
 [ENGLISH VERSION](README.md)
@@ -115,6 +117,10 @@ corepack yarn quality
 
 Команда `corepack yarn dev` открывает окно Electron, поэтому её следует запускать
 только намеренно.
+
+Утверждённые мастер-файлы айдентики и экспорты иконки приложения находятся в
+[`docs/brand`](docs/brand). Ресурсы для запуска и будущей упаковки хранятся в
+[`resources`](resources).
 
 Пользовательские изменения перечислены в [журнале изменений](CHANGELOG.md).
 

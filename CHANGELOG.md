@@ -28,6 +28,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   exact verified symbolic link while preserving configuration, source data, and conflicts.
 - A previewed, separately confirmed configuration-only removal for one safely disconnected
   macOS connection, preserving source data, destination folders, comments, and file mode.
+- The approved Yonder visual identity, application icon, renderer favicon, and local macOS
+  Dock icon resources.
 
 ### Changed
 

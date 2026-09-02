@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1400" role="img" aria-labelledby="title description">
+  <title id="title">Yonder horizontal lockup color sheet</title>
+  <desc id="description">The horizontal Yonder logo shown in cobalt, black, and reversed white applications.</desc>
+
+  <defs>
+    <filter id="ink-black" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 0.067
+        0 0 0 0 0.090
+        0 0 0 0 0.129
+        0 0 0 1 0"/>
+    </filter>
+    <filter id="ink-white" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 0.929
+        0 0 0 0 0.957
+        0 0 0 0 1.000
+        0 0 0 1 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1800" height="1400" fill="#dfe4ec"/>
+
+  <g id="brand-color">
+    <rect x="60" y="60" width="1680" height="580" rx="28" fill="#eceff4"/>
+    <text x="108" y="132" fill="#667085" font-family="system-ui, sans-serif" font-size="24" font-weight="600" letter-spacing="2">BRAND COLOR</text>
+    <image href="yonder-lockup.png" x="300" y="92" width="1200" height="548" preserveAspectRatio="xMidYMid meet"/>
+  </g>
+
+  <g id="single-ink">
+    <rect x="60" y="700" width="810" height="640" rx="28" fill="#ffffff"/>
+    <text x="108" y="772" fill="#667085" font-family="system-ui, sans-serif" font-size="24" font-weight="600" letter-spacing="2">SINGLE INK</text>
+    <image href="yonder-lockup.png" x="125" y="842" width="680" height="311" preserveAspectRatio="xMidYMid meet" filter="url(#ink-black)"/>
+  </g>
+
+  <g id="reverse">
+    <rect x="930" y="700" width="810" height="640" rx="28" fill="#101827"/>
+    <text x="978" y="772" fill="#9aa8bb" font-family="system-ui, sans-serif" font-size="24" font-weight="600" letter-spacing="2">REVERSE</text>
+    <image href="yonder-lockup.png" x="995" y="842" width="680" height="311" preserveAspectRatio="xMidYMid meet" filter="url(#ink-white)"/>
+  </g>
+</svg>

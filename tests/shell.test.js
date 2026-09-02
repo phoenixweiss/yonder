@@ -80,6 +80,26 @@ test('the minimal renderer has no UI framework, router or global store dependenc
   }
 })
 
+test('the approved identity is wired into the current application surfaces', async () => {
+  const [mainSource, htmlSource, appSource, iconPng, iconIcns] = await Promise.all([
+    readFile(new URL('../src/main/index.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/renderer/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
+    readFile(new URL('../resources/icon.png', import.meta.url)),
+    readFile(new URL('../resources/icon.icns', import.meta.url))
+  ])
+
+  assert.match(mainSource, /developmentAppIconPath/)
+  assert.match(mainSource, /app\.dock\.setIcon\(developmentAppIconPath\)/)
+  assert.match(htmlSource, /href="\/favicon\.png"/)
+  assert.match(appSource, /yonder-lockup\.svg/)
+  assert.equal(iconPng.subarray(1, 4).toString(), 'PNG')
+  assert.equal(iconPng.readUInt32BE(16), 1024)
+  assert.equal(iconPng.readUInt32BE(20), 1024)
+  assert.equal(iconPng[25], 6)
+  assert.equal(iconIcns.subarray(0, 4).toString(), 'icns')
+})
+
 test('opening a newly created storage is an explicit opt-in', async () => {
   const appSource = await readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8')
 

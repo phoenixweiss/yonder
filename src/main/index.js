@@ -34,6 +34,7 @@ const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
 const nativeHelperPath = fileURLToPath(
   new URL('../../build/native/yonder-link-helper', import.meta.url)
 )
+const developmentAppIconPath = fileURLToPath(new URL('../../resources/icon.png', import.meta.url))
 
 app.setName('Yonder')
 const ownsSingleInstance = app.requestSingleInstanceLock()
@@ -55,6 +56,7 @@ function createWindow() {
     minWidth: 600,
     minHeight: 520,
     backgroundColor: '#e5e9f0',
+    icon: app.isPackaged ? undefined : developmentAppIconPath,
     show: false,
     webPreferences: {
       preload: fileURLToPath(new URL('../preload/index.cjs', import.meta.url)),
@@ -660,6 +662,9 @@ function installStorageHandlers() {
 
 app.whenReady().then(async () => {
   if (!ownsSingleInstance) return
+  if (process.platform === 'darwin' && !app.isPackaged) {
+    app.dock.setIcon(developmentAppIconPath)
+  }
   draftController = createConnectionDraftController({
     homeDirectory: app.getPath('home')
   })

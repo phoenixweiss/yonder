@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Yonder isometric passage mark</title>
+  <desc id="description">Two identical cobalt square frames at opposite faces of an invisible cube, joined through their centers by a translucent square glass prism.</desc>
+  <metadata>
+    Geometry is defined in a normalized 100 x 100 x 100 cube.
+    Rear frame depth: y=0..10. Front frame depth: y=90..100.
+    Frame outer size: 100 x 100. Frame inset: 18.
+    Connector: x=41..59, y=10..90, z=41..59.
+    Projection: orthographic isometric, scale=4.1, axes at 30 degrees.
+  </metadata>
+
+  <defs>
+    <linearGradient id="frame-face" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#397cff"/>
+      <stop offset="0.46" stop-color="#1459d9"/>
+      <stop offset="1" stop-color="#082f92"/>
+    </linearGradient>
+    <linearGradient id="frame-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b91ff"/>
+      <stop offset="1" stop-color="#1e5ed6"/>
+    </linearGradient>
+    <linearGradient id="frame-side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#174fb8"/>
+      <stop offset="1" stop-color="#061f67"/>
+    </linearGradient>
+    <linearGradient id="frame-inner" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a2a76"/>
+      <stop offset="1" stop-color="#123f99"/>
+    </linearGradient>
+
+    <linearGradient id="glass-top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="0.16" stop-color="#eafcff" stop-opacity="0.38"/>
+      <stop offset="0.58" stop-color="#a9d9ff" stop-opacity="0.18"/>
+      <stop offset="0.84" stop-color="#70cfe9" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#b9ebff" stop-opacity="0.32"/>
+    </linearGradient>
+    <linearGradient id="glass-left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#effcff" stop-opacity="0.5"/>
+      <stop offset="0.56" stop-color="#8ec8ee" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#46cbe6" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="glass-right" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b8e9ff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#3f8ed8" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+
+  <!--
+    Projection of a world point (x,y,z):
+      screenX = 512 + 4.1 * cos(30deg) * (y - x)
+      screenY = 512 + 4.1 * 0.5 * (x + y - 100) - 4.1 * (z - 50)
+    All plane transforms below are exact affine forms of that projection.
+  -->
+
+  <g id="rear-frame">
+    <!-- Outer extrusion: y=0..10. -->
+    <rect x="0" y="0" width="100" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 102)" fill="url(#frame-top)"/>
+    <rect x="0" y="0" width="10" height="100" transform="matrix(3.550704 2.05 0 -4.1 512 512)" fill="url(#frame-side)"/>
+    <rect x="0" y="0" width="10" height="100" transform="matrix(3.550704 2.05 0 -4.1 156.9296 717)" fill="url(#frame-side)" opacity="0.82"/>
+    <rect x="0" y="0" width="100" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 512)" fill="url(#frame-side)" opacity="0.76"/>
+
+    <!-- Aperture extrusion. -->
+    <rect x="18" y="0" width="64" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 175.8)" fill="url(#frame-inner)"/>
+    <rect x="18" y="0" width="64" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 438.2)" fill="url(#frame-inner)" opacity="0.82"/>
+    <rect x="0" y="18" width="10" height="64" transform="matrix(3.550704 2.05 0 -4.1 448.0873 548.9)" fill="url(#frame-inner)"/>
+    <rect x="0" y="18" width="10" height="64" transform="matrix(3.550704 2.05 0 -4.1 220.8423 680.1)" fill="url(#frame-inner)" opacity="0.84"/>
+
+    <!-- Near frame face at y=10. -->
+    <path d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 547.507 532.5)"
+      fill="url(#frame-face)" fill-rule="evenodd"
+      stroke="#75a4ff" stroke-opacity="0.44" stroke-width="1.35" vector-effect="non-scaling-stroke"/>
+  </g>
+
+  <g id="glass-connector">
+    <!-- Constant 18 x 18 square prism spanning exactly between the inner frame
+         planes at y=10 and y=90. Its terminal planes are only outlined so the
+         connector reads as one continuous, secondary glass volume. -->
+    <rect x="41" y="41" width="18" height="18"
+      transform="matrix(-3.550704 2.05 0 -4.1 547.507 532.5)"
+      fill="none"
+      stroke="#e8f7ff" stroke-opacity="0.36" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+    <rect x="10" y="41" width="80" height="18"
+      transform="matrix(3.550704 2.05 0 -4.1 302.5085 632.95)"
+      fill="url(#glass-right)" fill-opacity="0.38"
+      stroke="#8bc1f6" stroke-opacity="0.18" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+    <rect x="41" y="10" width="18" height="80"
+      transform="matrix(-3.550704 2.05 3.550704 2.05 512 270.1)"
+      fill="url(#glass-top)" fill-opacity="0.48"
+      stroke="#e8f7ff" stroke-opacity="0.25" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+    <rect x="10" y="41" width="80" height="18"
+      transform="matrix(3.550704 2.05 0 -4.1 366.4211 596.05)"
+      fill="url(#glass-left)" fill-opacity="0.44"
+      stroke="#d8efff" stroke-opacity="0.2" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+
+    <!-- Deliberate optical edges: a neutral catchlight above and a restrained
+         cyan refraction along the lower near edge. -->
+    <line x1="10" y1="59" x2="90" y2="59"
+      transform="matrix(3.550704 2.05 0 -4.1 366.4211 596.05)"
+      stroke="#f7fdff" stroke-opacity="0.62" stroke-width="1.15" vector-effect="non-scaling-stroke"/>
+    <line x1="10" y1="41" x2="90" y2="41"
+      transform="matrix(3.550704 2.05 0 -4.1 366.4211 596.05)"
+      stroke="#5ce8ff" stroke-opacity="0.34" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <line x1="10" y1="59" x2="90" y2="59"
+      transform="matrix(3.550704 2.05 0 -4.1 302.5085 632.95)"
+      stroke="#eafaff" stroke-opacity="0.24" stroke-width="1" vector-effect="non-scaling-stroke"/>
+
+    <rect x="41" y="41" width="18" height="18"
+      transform="matrix(-3.550704 2.05 0 -4.1 831.5634 696.5)"
+      fill="none"
+      stroke="#f2fbff" stroke-opacity="0.44" stroke-width="1.1" vector-effect="non-scaling-stroke"/>
+  </g>
+
+  <g id="front-frame">
+    <!-- Outer extrusion: y=90..100. -->
+    <rect x="0" y="90" width="100" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 102)" fill="url(#frame-top)"/>
+    <rect x="90" y="0" width="10" height="100" transform="matrix(3.550704 2.05 0 -4.1 512 512)" fill="url(#frame-side)"/>
+    <rect x="90" y="0" width="10" height="100" transform="matrix(3.550704 2.05 0 -4.1 156.9296 717)" fill="url(#frame-side)" opacity="0.82"/>
+    <rect x="0" y="90" width="100" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 512)" fill="url(#frame-side)" opacity="0.76"/>
+
+    <!-- Aperture extrusion. -->
+    <rect x="18" y="90" width="64" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 175.8)" fill="url(#frame-inner)"/>
+    <rect x="18" y="90" width="64" height="10" transform="matrix(-3.550704 2.05 3.550704 2.05 512 438.2)" fill="url(#frame-inner)" opacity="0.82"/>
+    <rect x="90" y="18" width="10" height="64" transform="matrix(3.550704 2.05 0 -4.1 448.0873 548.9)" fill="url(#frame-inner)"/>
+    <rect x="90" y="18" width="10" height="64" transform="matrix(3.550704 2.05 0 -4.1 220.8423 680.1)" fill="url(#frame-inner)" opacity="0.84"/>
+
+    <!-- Outermost frame face at y=100. -->
+    <path d="M0 0H100V100H0Z M18 18H82V82H18Z"
+      transform="matrix(-3.550704 2.05 0 -4.1 867.0704 717)"
+      fill="url(#frame-face)" fill-rule="evenodd"
+      stroke="#75a4ff" stroke-opacity="0.48" stroke-width="1.35" vector-effect="non-scaling-stroke"/>
+  </g>
+</svg>
