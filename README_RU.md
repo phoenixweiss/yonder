@@ -51,7 +51,7 @@ Yonder выполняет только явные и узко ограничен
 ## Скачать
 
 Yonder пока распространяется как ранняя публичная предварительная версия. Текущий релиз —
-[Yonder 0.1.3](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.3) для Mac
+[Yonder 0.1.4](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.4) для Mac
 с Apple silicon под управлением macOS 13 или новее.
 
 Сборка для macOS защищена ad-hoc подписью для контроля целостности, но ещё не

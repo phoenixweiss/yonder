@@ -49,7 +49,7 @@ disconnecting a connection removes only the exact verified symbolic link.
 ## Download
 
 Yonder is an early public preview. The current release is
-[Yonder 0.1.3](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.3) for
+[Yonder 0.1.4](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.4) for
 Apple silicon Macs running macOS 13 or later.
 
 The macOS bundle is ad-hoc signed for integrity, but it is not yet Developer ID
