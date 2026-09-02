@@ -31,9 +31,9 @@ let pendingDraftStorageId = ''
 let pendingDisconnectStorageId = ''
 let pendingRemovalStorageId = ''
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined
-const nativeHelperPath = fileURLToPath(
-  new URL('../../build/native/yonder-link-helper', import.meta.url)
-)
+const nativeHelperPath = app.isPackaged
+  ? join(process.resourcesPath, 'native', 'yonder-link-helper')
+  : fileURLToPath(new URL('../../build/native/yonder-link-helper', import.meta.url))
 const developmentAppIconPath = fileURLToPath(new URL('../../resources/icon.png', import.meta.url))
 
 app.setName('Yonder')

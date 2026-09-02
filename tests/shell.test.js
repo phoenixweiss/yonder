@@ -100,6 +100,38 @@ test('the approved identity is wired into the current application surfaces', asy
   assert.equal(iconIcns.subarray(0, 4).toString(), 'icns')
 })
 
+test('the unsigned macOS package keeps the native helper outside ASAR', async () => {
+  const [builderSource, packageSource, mainSource] = await Promise.all([
+    readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    readFile(new URL('../src/main/index.js', import.meta.url), 'utf8')
+  ])
+  const builder = parse(builderSource)
+  const manifest = JSON.parse(packageSource)
+  const nativeHelper = builder.extraResources.find(
+    ({ from, to }) =>
+      from === 'build/native/yonder-link-helper' && to === 'native/yonder-link-helper'
+  )
+
+  assert.equal(builder.appId, 'io.github.phoenixweiss.yonder')
+  assert.equal(builder.productName, 'Yonder')
+  assert.deepEqual(builder.mac.target, ['dmg', 'zip'])
+  assert.equal(builder.mac.icon, 'resources/icon.icns')
+  assert.equal(builder.mac.identity, null)
+  assert.equal(builder.mac.hardenedRuntime, false)
+  assert.deepEqual(builder.electronLanguages, ['en-US', 'ru'])
+  assert.ok(nativeHelper)
+  assert.equal(builder.publish, undefined)
+  assert.equal(manifest.devDependencies['electron-builder'], '26.15.3')
+  assert.deepEqual(Object.keys(manifest.dependencies), ['yaml'])
+  for (const dependency of ['i18next', 'i18next-vue', 'vue']) {
+    assert.equal(typeof manifest.devDependencies[dependency], 'string')
+  }
+  assert.match(manifest.scripts['package:mac:dir'], /electron-builder --mac dir/)
+  assert.match(manifest.scripts['package:mac'], /electron-builder --mac --config/)
+  assert.match(mainSource, /app\.isPackaged[\s\S]*?process\.resourcesPath[\s\S]*?native/)
+})
+
 test('opening a newly created storage is an explicit opt-in', async () => {
   const appSource = await readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8')
 

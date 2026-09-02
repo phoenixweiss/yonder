@@ -30,6 +30,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   macOS connection, preserving source data, destination folders, comments, and file mode.
 - The approved Yonder visual identity, application icon, renderer favicon, and local macOS
   Dock icon resources.
+- A local unsigned macOS packaging flow for current-architecture app, DMG, and ZIP artifacts,
+  with the approved icon and executable native helper placed outside ASAR.
 
 ### Changed
 

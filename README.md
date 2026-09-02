@@ -109,8 +109,14 @@ corepack yarn quality
 
 `corepack yarn dev` opens the Electron window and should be run deliberately.
 
+On macOS, `corepack yarn package:mac:dir` produces a quick local `.app` for inspection.
+`corepack yarn package:mac` produces unsigned DMG and ZIP artifacts for the current
+machine architecture in `dist/`. These local artifacts use the approved application
+icon and include the executable link helper outside ASAR. They are not notarized,
+published, or presented as a public release.
+
 Approved identity masters and application-icon exports live in
-[`docs/brand`](docs/brand). Runtime and future packaging inputs are kept in
+[`docs/brand`](docs/brand). Runtime and packaging inputs are kept in
 [`resources`](resources).
 
 See the [changelog](CHANGELOG.md) for user-visible changes.
