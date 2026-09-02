@@ -111,7 +111,7 @@ Electron служит тонкой desktop-оболочкой: нативные 
 
 ## Скачать
 
-[Yonder 0.1.1](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.1) — текущая
+[Yonder 0.1.2](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.2) — текущая
 публичная предварительная версия для Mac с Apple silicon. App bundle защищён ad-hoc
 подписью для контроля целостности, но ещё не подписан Developer ID и не нотаризован.
 После копирования Yonder в «Программы» щёлкните приложение с зажатой клавишей Control,

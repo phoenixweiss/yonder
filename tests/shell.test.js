@@ -135,6 +135,7 @@ test('the ad-hoc signed macOS package keeps the native helper outside ASAR', asy
   }
   assert.match(manifest.scripts['package:mac:dir'], /electron-builder --mac dir/)
   assert.match(manifest.scripts['package:mac'], /electron-builder --mac --config/)
+  assert.match(manifest.scripts['package:mac'], /--publish never/)
   assert.match(mainSource, /app\.isPackaged[\s\S]*?process\.resourcesPath[\s\S]*?native/)
 })
 

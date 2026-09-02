@@ -102,7 +102,7 @@ Development proceeds in small, reviewed steps.
 
 ## Download
 
-[Yonder 0.1.1](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.1) is the
+[Yonder 0.1.2](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.2) is the
 current public preview for Apple silicon Macs. Its app bundle is ad-hoc signed for
 integrity, but it is not Developer ID signed or notarized. After copying Yonder to
 Applications, Control-click the app, choose **Open**, and confirm the first launch.

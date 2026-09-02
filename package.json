@@ -1,6 +1,6 @@
 {
   "name": "yonder",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Keep it there. Use it here.",
   "license": "MIT",
   "author": "PAVEL TKACHEV",
@@ -22,7 +22,7 @@
     "dev": "electron-vite dev",
     "build": "yarn build:native && electron-vite build",
     "package:mac:dir": "yarn build && electron-builder --mac dir --config electron-builder.yml",
-    "package:mac": "yarn build && electron-builder --mac --config electron-builder.yml",
+    "package:mac": "yarn build && electron-builder --mac --config electron-builder.yml --publish never",
     "prestart": "yarn electron:install && yarn build:native",
     "start": "electron-vite preview",
     "lint": "eslint .",

@@ -8,6 +8,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-02
+
+### Changed
+
+- macOS packaging now explicitly disables electron-builder's tag-triggered implicit
+  publishing so the release workflow can verify every artifact before publication.
+
 ## [0.1.1] - 2026-09-02
 
 ### Added
@@ -52,6 +59,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Secondary actions have clearer contrast and a calmer hover state.
 
-[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/phoenixweiss/yonder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/phoenixweiss/yonder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/phoenixweiss/yonder/releases/tag/v0.1.0
