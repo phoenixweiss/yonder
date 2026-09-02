@@ -8,6 +8,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-02
+
 ### Changed
 
 - The Yonder header lockup is slightly larger while preserving the compact window layout.
@@ -71,7 +73,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Secondary actions have clearer contrast and a calmer hover state.
 
-[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/phoenixweiss/yonder/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/phoenixweiss/yonder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/phoenixweiss/yonder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/phoenixweiss/yonder/releases/tag/v0.1.0
