@@ -132,6 +132,57 @@ test('the unsigned macOS package keeps the native helper outside ASAR', async ()
   assert.match(mainSource, /app\.isPackaged[\s\S]*?process\.resourcesPath[\s\S]*?native/)
 })
 
+test('tagged macOS releases build and publish only verified Apple silicon artifacts', async () => {
+  const workflowSource = await readFile(
+    new URL('../.github/workflows/release-macos.yml', import.meta.url),
+    'utf8'
+  )
+  const workflow = parse(workflowSource)
+  const releaseJob = workflow.jobs.release
+  const actionRefs = releaseJob.steps.filter(({ uses }) => uses).map(({ uses }) => uses)
+  const runSource = releaseJob.steps
+    .filter(({ run }) => run)
+    .map(({ run }) => run)
+    .join('\n')
+
+  assert.deepEqual(workflow.on.push.tags, ['v*.*.*'])
+  assert.deepEqual(workflow.permissions, {})
+  assert.equal(workflow.concurrency['cancel-in-progress'], false)
+  assert.equal(releaseJob['runs-on'], 'macos-15')
+  assert.deepEqual(releaseJob.permissions, { contents: 'write' })
+  assert.deepEqual(actionRefs, [
+    'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803',
+    'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38'
+  ])
+  assert.match(runSource, /yarn install --frozen-lockfile/)
+  assert.match(runSource, /GITHUB_REF_NAME[\s\S]*?package_version/)
+  assert.match(runSource, /uname -m[\s\S]*?arm64/)
+  assert.match(runSource, /yarn quality/)
+  assert.match(runSource, /yarn package:mac/)
+  assert.match(runSource, /hdiutil verify/)
+  assert.match(runSource, /unzip -t/)
+  assert.match(runSource, /shasum -a 256 -c SHA256SUMS\.txt/)
+  assert.match(runSource, /gh release create[\s\S]*?--draft[\s\S]*?--prerelease/)
+  assert.match(runSource, /remote_digest[\s\S]*?local_digest/)
+  assert.match(runSource, /gh release edit[\s\S]*?--draft=false/)
+  assert.match(workflowSource, /GH_TOKEN: \$\{\{ github\.token \}\}/)
+  assert.doesNotMatch(workflowSource, /pull_request_target|workflow_dispatch|--clobber/)
+})
+
+test('public project materials foreground the external synchronization boundary', async () => {
+  const [readme, readmeRu, workflow] = await Promise.all([
+    readFile(new URL('../README.md', import.meta.url), 'utf8'),
+    readFile(new URL('../README_RU.md', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/release-macos.yml', import.meta.url), 'utf8')
+  ])
+  const canonicalStatement =
+    'Yonder does not provide its own synchronization service. Files remain in an ordinary folder, and synchronization is left to an external cloud client.'
+
+  assert.match(readme, /> \*\*Yonder does not provide its own synchronization service\./)
+  assert.match(readmeRu, /> \*\*Yonder не предоставляет собственный сервис синхронизации\./)
+  assert.ok(workflow.includes(`**${canonicalStatement}**`))
+})
+
 test('opening a newly created storage is an explicit opt-in', async () => {
   const appSource = await readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8')
 

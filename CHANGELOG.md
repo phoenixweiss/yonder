@@ -8,6 +8,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- A tag-driven GitHub Actions workflow that builds, validates, and publishes unsigned
+  Apple silicon preview releases through a checksum-verified draft.
+
 ## [0.1.0] - 2026-09-02
 
 ### Added

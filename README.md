@@ -8,8 +8,11 @@ Keep it there. Use it here.
 
 Yonder is a small desktop utility for keeping files in one ordinary storage folder
 and making them available where applications expect them through symbolic links.
-The storage may be synchronized by any cloud client; Yonder does not provide its
-own cloud, account, server, or telemetry.
+
+> **Yonder does not provide its own synchronization service. Files remain in an
+> ordinary folder, and synchronization is left to an external cloud client.**
+
+Yonder has no account, server, or telemetry.
 
 ## The idea
 
@@ -121,6 +124,12 @@ On macOS, `corepack yarn package:mac:dir` produces a quick local `.app` for insp
 machine architecture in `dist/`. These local artifacts use the approved application
 icon and include the executable link helper outside ASAR. They are not signed or
 notarized, and the packaging command does not publish them automatically.
+
+Pushing an explicit `vMAJOR.MINOR.PATCH` tag starts the macOS release workflow. It
+requires the tag to match `package.json`, runs the complete project checks on an
+Apple silicon runner, verifies the unsigned DMG and ZIP, and publishes them through
+a checksum-verified draft GitHub pre-release. The workflow never changes the version,
+changelog, or tags itself.
 
 Approved identity masters and application-icon exports live in
 [`docs/brand`](docs/brand). Runtime and packaging inputs are kept in

@@ -1,0 +1,134 @@
+name: Release macOS
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish Apple silicon preview
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Enable Yarn Classic
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack yarn install --frozen-lockfile
+
+      - name: Validate the release tag and runner
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "require('./package.json').version")"
+          [[ "$package_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$GITHUB_REF_NAME" = "v${package_version}"
+          test "$(uname -m)" = "arm64"
+          printf 'version=%s\n' "$package_version" >> "$GITHUB_OUTPUT"
+
+      - name: Run project checks
+        run: corepack yarn quality
+
+      - name: Package macOS artifacts
+        run: corepack yarn package:mac
+
+      - name: Verify artifacts and create checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.release.outputs.version }}"
+          dmg="dist/Yonder-${version}-arm64.dmg"
+          zip="dist/Yonder-${version}-arm64.zip"
+          app="dist/mac-arm64/Yonder.app"
+          helper="${app}/Contents/Resources/native/yonder-link-helper"
+
+          test -f "$dmg"
+          test -f "$zip"
+          test -x "$helper"
+          file "${app}/Contents/MacOS/Yonder" | grep -q 'arm64'
+          file "$helper" | grep -q 'arm64'
+          hdiutil verify "$dmg"
+          unzip -t "$zip" >/dev/null
+
+          cd dist
+          shasum -a 256 \
+            "Yonder-${version}-arm64.dmg" \
+            "Yonder-${version}-arm64.zip" > SHA256SUMS.txt
+          shasum -a 256 -c SHA256SUMS.txt
+
+      - name: Upload a verified draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.release.outputs.version }}"
+          notice="$(cat <<'EOF'
+          This automated preview supports Apple silicon (`arm64`) on macOS 13 or later. The DMG and ZIP are unsigned and not notarized, so macOS may warn or block the first launch. Download them only if you are comfortable running unsigned software; otherwise, build Yonder from source.
+
+          **Yonder does not provide its own synchronization service. Files remain in an ordinary folder, and synchronization is left to an external cloud client.**
+
+          See the canonical [README.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md) or the Russian [README_RU.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README_RU.md).
+          EOF
+          )"
+
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/Yonder-${version}-arm64.dmg#macOS Apple silicon DMG (unsigned)" \
+            "dist/Yonder-${version}-arm64.zip#macOS Apple silicon ZIP (unsigned)" \
+            "dist/SHA256SUMS.txt#SHA-256 checksums" \
+            --draft \
+            --fail-on-no-commits \
+            --generate-notes \
+            --latest=false \
+            --notes "$notice" \
+            --prerelease \
+            --title "Yonder ${version} preview" \
+            --verify-tag
+
+      - name: Verify and publish the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.release.outputs.version }}"
+
+          for asset in \
+            "dist/Yonder-${version}-arm64.dmg" \
+            "dist/Yonder-${version}-arm64.zip" \
+            "dist/SHA256SUMS.txt"
+          do
+            name="$(basename "$asset")"
+            local_digest="sha256:$(shasum -a 256 "$asset" | awk '{print $1}')"
+            remote_digest="$(gh release view "$GITHUB_REF_NAME" --json assets --jq ".assets[] | select(.name == \"${name}\") | .digest")"
+            test "$remote_digest" = "$local_digest"
+          done
+
+          gh release edit "$GITHUB_REF_NAME" \
+            --draft=false \
+            --prerelease \
+            --verify-tag
