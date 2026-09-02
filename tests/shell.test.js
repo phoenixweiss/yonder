@@ -100,7 +100,7 @@ test('the approved identity is wired into the current application surfaces', asy
   assert.equal(iconIcns.subarray(0, 4).toString(), 'icns')
 })
 
-test('the unsigned macOS package keeps the native helper outside ASAR', async () => {
+test('the ad-hoc signed macOS package keeps the native helper outside ASAR', async () => {
   const [builderSource, packageSource, mainSource] = await Promise.all([
     readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8'),
     readFile(new URL('../package.json', import.meta.url), 'utf8'),
@@ -117,9 +117,15 @@ test('the unsigned macOS package keeps the native helper outside ASAR', async ()
   assert.equal(builder.productName, 'Yonder')
   assert.deepEqual(builder.mac.target, ['dmg', 'zip'])
   assert.equal(builder.mac.icon, 'resources/icon.icns')
-  assert.equal(builder.mac.identity, null)
+  assert.equal(builder.mac.identity, '-')
   assert.equal(builder.mac.hardenedRuntime, false)
   assert.deepEqual(builder.electronLanguages, ['en-US', 'ru'])
+  assert.equal(builder.dmg.background, 'resources/dmg-background.tiff')
+  assert.deepEqual(builder.dmg.window, { width: 540, height: 380 })
+  assert.deepEqual(builder.dmg.contents, [
+    { x: 130, y: 128, type: 'file' },
+    { x: 410, y: 128, type: 'link', path: '/Applications' }
+  ])
   assert.ok(nativeHelper)
   assert.equal(builder.publish, undefined)
   assert.equal(manifest.devDependencies['electron-builder'], '26.15.3')
@@ -159,6 +165,7 @@ test('tagged macOS releases build and publish only verified Apple silicon artifa
   assert.match(runSource, /uname -m[\s\S]*?arm64/)
   assert.match(runSource, /yarn quality/)
   assert.match(runSource, /yarn package:mac/)
+  assert.match(runSource, /codesign --verify --deep --strict/)
   assert.match(runSource, /hdiutil verify/)
   assert.match(runSource, /unzip -t/)
   assert.match(runSource, /shasum -a 256 -c SHA256SUMS\.txt/)

@@ -27,10 +27,22 @@ mac:
     - zip
   category: public.app-category.utilities
   icon: resources/icon.icns
-  identity: null
+  identity: '-'
   hardenedRuntime: false
   artifactName: ${productName}-${version}-${arch}.${ext}
 
 dmg:
   title: ${productName} ${version}
   artifactName: ${productName}-${version}-${arch}.${ext}
+  background: resources/dmg-background.tiff
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 130
+      y: 128
+      type: file
+    - x: 410
+      y: 128
+      type: link
+      path: /Applications

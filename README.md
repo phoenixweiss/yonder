@@ -102,10 +102,11 @@ Development proceeds in small, reviewed steps.
 
 ## Download
 
-[Yonder 0.1.0](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.0) is the
-first public preview for Apple silicon Macs. Its DMG and ZIP are unsigned and not
-notarized, so macOS may warn or block the first launch. Download it only if you are
-comfortable running unsigned software; otherwise, build Yonder from source.
+[Yonder 0.1.1](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.1) is the
+current public preview for Apple silicon Macs. Its app bundle is ad-hoc signed for
+integrity, but it is not Developer ID signed or notarized. After copying Yonder to
+Applications, Control-click the app, choose **Open**, and confirm the first launch.
+If you are not comfortable approving an unnotarized build, build Yonder from source.
 
 ## Development
 
@@ -120,14 +121,15 @@ corepack yarn quality
 `corepack yarn dev` opens the Electron window and should be run deliberately.
 
 On macOS, `corepack yarn package:mac:dir` produces a quick local `.app` for inspection.
-`corepack yarn package:mac` produces unsigned DMG and ZIP artifacts for the current
+`corepack yarn package:mac` produces ad-hoc-signed DMG and ZIP artifacts for the current
 machine architecture in `dist/`. These local artifacts use the approved application
-icon and include the executable link helper outside ASAR. They are not signed or
-notarized, and the packaging command does not publish them automatically.
+icon and include the executable link helper outside ASAR. The ad-hoc signature seals
+the app bundle for integrity but does not identify the developer or notarize the app;
+the packaging command does not publish it automatically.
 
 Pushing an explicit `vMAJOR.MINOR.PATCH` tag starts the macOS release workflow. It
 requires the tag to match `package.json`, runs the complete project checks on an
-Apple silicon runner, verifies the unsigned DMG and ZIP, and publishes them through
+Apple silicon runner, verifies the ad-hoc-signed DMG and ZIP, and publishes them through
 a checksum-verified draft GitHub pre-release. The workflow never changes the version,
 changelog, or tags itself.
 

@@ -67,8 +67,11 @@ jobs:
           test -f "$dmg"
           test -f "$zip"
           test -x "$helper"
+          test -f "${app}/Contents/_CodeSignature/CodeResources"
           file "${app}/Contents/MacOS/Yonder" | grep -q 'arm64'
           file "$helper" | grep -q 'arm64'
+          codesign --verify --deep --strict --verbose=4 "$app"
+          codesign --verify --strict --verbose=4 "$helper"
           hdiutil verify "$dmg"
           unzip -t "$zip" >/dev/null
 
@@ -87,7 +90,7 @@ jobs:
           set -euo pipefail
           version="${{ steps.release.outputs.version }}"
           notice="$(cat <<'EOF'
-          This automated preview supports Apple silicon (`arm64`) on macOS 13 or later. The DMG and ZIP are unsigned and not notarized, so macOS may warn or block the first launch. Download them only if you are comfortable running unsigned software; otherwise, build Yonder from source.
+          This automated preview supports Apple silicon (`arm64`) on macOS 13 or later. Its app bundle is ad-hoc signed for integrity, but it is not Developer ID signed or notarized. After copying Yonder to Applications, Control-click the app, choose **Open**, and confirm the first launch.
 
           **Yonder does not provide its own synchronization service. Files remain in an ordinary folder, and synchronization is left to an external cloud client.**
 
@@ -96,8 +99,8 @@ jobs:
           )"
 
           gh release create "$GITHUB_REF_NAME" \
-            "dist/Yonder-${version}-arm64.dmg#macOS Apple silicon DMG (unsigned)" \
-            "dist/Yonder-${version}-arm64.zip#macOS Apple silicon ZIP (unsigned)" \
+            "dist/Yonder-${version}-arm64.dmg#macOS Apple silicon DMG (ad-hoc signed)" \
+            "dist/Yonder-${version}-arm64.zip#macOS Apple silicon ZIP (ad-hoc signed)" \
             "dist/SHA256SUMS.txt#SHA-256 checksums" \
             --draft \
             --fail-on-no-commits \

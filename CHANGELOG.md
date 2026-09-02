@@ -8,10 +8,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-02
+
 ### Added
 
-- A tag-driven GitHub Actions workflow that builds, validates, and publishes unsigned
+- A tag-driven GitHub Actions workflow that builds, validates, and publishes ad-hoc-signed
   Apple silicon preview releases through a checksum-verified draft.
+
+### Changed
+
+- The DMG installation row now uses an explicit, vertically balanced Finder layout.
+- macOS application bundles are now fully ad-hoc signed so Gatekeeper can verify their
+  internal integrity after download; Developer ID signing and notarization remain absent.
 
 ## [0.1.0] - 2026-09-02
 
@@ -44,5 +52,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Secondary actions have clearer contrast and a calmer hover state.
 
-[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/phoenixweiss/yonder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/phoenixweiss/yonder/releases/tag/v0.1.0
