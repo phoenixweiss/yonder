@@ -8,6 +8,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-02
+
 ### Added
 
 - A secure Electron shell with a Vue 3 and Vite renderer.
@@ -36,3 +38,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Changed
 
 - Secondary actions have clearer contrast and a calmer hover state.
+
+[Unreleased]: https://github.com/phoenixweiss/yonder/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/phoenixweiss/yonder/releases/tag/v0.1.0

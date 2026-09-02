@@ -97,6 +97,13 @@ design, but will not be claimed as supported until they are tested natively.
 The interface starts as one compact window with a light, Nord-inspired visual theme.
 Development proceeds in small, reviewed steps.
 
+## Download
+
+[Yonder 0.1.0](https://github.com/phoenixweiss/yonder/releases/tag/v0.1.0) is the
+first public preview for Apple silicon Macs. Its DMG and ZIP are unsigned and not
+notarized, so macOS may warn or block the first launch. Download it only if you are
+comfortable running unsigned software; otherwise, build Yonder from source.
+
 ## Development
 
 Yonder currently requires Node.js 24 and Yarn Classic `1.22.22`. Native macOS builds
@@ -112,8 +119,8 @@ corepack yarn quality
 On macOS, `corepack yarn package:mac:dir` produces a quick local `.app` for inspection.
 `corepack yarn package:mac` produces unsigned DMG and ZIP artifacts for the current
 machine architecture in `dist/`. These local artifacts use the approved application
-icon and include the executable link helper outside ASAR. They are not notarized,
-published, or presented as a public release.
+icon and include the executable link helper outside ASAR. They are not signed or
+notarized, and the packaging command does not publish them automatically.
 
 Approved identity masters and application-icon exports live in
 [`docs/brand`](docs/brand). Runtime and packaging inputs are kept in
