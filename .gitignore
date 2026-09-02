@@ -17,6 +17,7 @@ playwright-report/
 /AGENTS.md
 /todo.tmp.md
 /*.tmp.md
+/bumpster.log
 
 # Personal runtime configurations.
 /yonder.yaml

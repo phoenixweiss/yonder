@@ -8,6 +8,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- The Yonder header lockup is slightly larger while preserving the compact window layout.
+- Apply initialization now accepts a case-only canonical spelling difference in Electron's
+  existing macOS user-data path while continuing to reject a symbolic-link journal directory.
+- Connection cards now use clear Source and Destination labels, lead disconnected users into
+  Connect, and present a successful connection as complete rather than showing competing next steps.
+- Dashboards, connection drafts, and confirmations now identify file-to-file and folder-to-folder
+  mappings explicitly.
+- The English and Russian READMEs now present the product, safety model, preview status, and
+  development workflow as concise project documentation.
+
 ## [0.1.2] - 2026-09-02
 
 ### Changed

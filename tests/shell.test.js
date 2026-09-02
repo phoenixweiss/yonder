@@ -162,6 +162,7 @@ test('tagged macOS releases build and publish only verified Apple silicon artifa
     'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38'
   ])
   assert.match(runSource, /yarn install --frozen-lockfile/)
+  assert.match(runSource, /version_file[\s\S]*?package_version/)
   assert.match(runSource, /GITHUB_REF_NAME[\s\S]*?package_version/)
   assert.match(runSource, /uname -m[\s\S]*?arm64/)
   assert.match(runSource, /yarn quality/)
@@ -175,6 +176,26 @@ test('tagged macOS releases build and publish only verified Apple silicon artifa
   assert.match(runSource, /gh release edit[\s\S]*?--draft=false/)
   assert.match(workflowSource, /GH_TOKEN: \$\{\{ github\.token \}\}/)
   assert.doesNotMatch(workflowSource, /pull_request_target|workflow_dispatch|--clobber/)
+})
+
+test('Bumpster coordinates version, changelog, and quality checks', async () => {
+  const [version, manifestSource, config, hook] = await Promise.all([
+    readFile(new URL('../VERSION', import.meta.url), 'utf8'),
+    readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    readFile(new URL('../.bumpsterrc', import.meta.url), 'utf8'),
+    readFile(new URL('../.bumpster/hooks/pre-bump', import.meta.url), 'utf8')
+  ])
+  const manifest = JSON.parse(manifestSource)
+
+  assert.equal(version.trim(), manifest.version)
+  assert.match(config, /GIT_MASTER_BRANCH="main"/)
+  assert.match(config, /GIT_DEVELOP_BRANCH="dev"/)
+  assert.match(config, /SYNC_WITH_PACKAGE_JSON="true"/)
+  assert.match(config, /BEFORE_BUMP_BRANCH="dev"/)
+  assert.match(config, /AFTER_BUMP_BRANCH="dev"/)
+  assert.match(hook, /corepack yarn quality/)
+  assert.match(hook, /prepare-release-changelog\.mjs/)
+  assert.match(hook, /git add CHANGELOG\.md/)
 })
 
 test('public project materials foreground the external synchronization boundary', async () => {
@@ -218,6 +239,25 @@ test('connection apply exposes only selection ids and one-time confirmation toke
   assert.match(mainSource, /const applyStorage = \{ \.\.\.activeStorage \}/)
   assert.match(mainSource, /applyController\.prepare\([\s\S]*?applyStorage\.folderPath/)
   assert.match(mainSource, /requestSingleInstanceLock/)
+})
+
+test('the connection dashboard presents one primary state and keeps removal optional', async () => {
+  const [appSource, enSource, ruSource] = await Promise.all([
+    readFile(new URL('../src/renderer/src/App.vue', import.meta.url), 'utf8'),
+    readFile(new URL('../src/renderer/src/locales/en.yaml', import.meta.url), 'utf8'),
+    readFile(new URL('../src/renderer/src/locales/ru.yaml', import.meta.url), 'utf8')
+  ])
+
+  assert.match(
+    appSource,
+    /v-if="connection\.state === 'connected'"[\s\S]*?inspection\.connectedReady/
+  )
+  assert.match(appSource, /v-else-if="connectionPreview\(connection\)"/)
+  assert.doesNotMatch(appSource, /preview\.nextStep|disconnect\.available/)
+  assert.match(enSource, /source: Source\n {2}target: Destination/)
+  assert.match(ruSource, /source: Источник\n {2}target: Назначение/)
+  assert.match(enSource, /open: Connect…/)
+  assert.match(ruSource, /open: Подключить…/)
 })
 
 test('connection authoring separates preview from a one-time configuration confirmation', async () => {

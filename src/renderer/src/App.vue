@@ -79,6 +79,7 @@ function emptyConnectionDraft() {
     sourceSelectionId: '',
     sourceRelativePath: '',
     sourceDisplayPath: '',
+    sourceType: '',
     targetSelectionId: '',
     targetRelativePath: '',
     targetDisplayPath: '',
@@ -238,6 +239,7 @@ async function chooseConnectionDraftSource() {
     connectionDraft.value.sourceSelectionId = result.selectionId
     connectionDraft.value.sourceRelativePath = result.relativePath
     connectionDraft.value.sourceDisplayPath = result.displayPath
+    connectionDraft.value.sourceType = result.sourceType
     if (!connectionDraftLinkNameEdited.value) {
       connectionDraft.value.linkName = result.defaultLinkName
     }
@@ -966,6 +968,7 @@ async function confirmCreation() {
     >
       <h2 id="connection-draft-title">{{ $t('connectionDraft.title') }}</h2>
       <p class="intro">{{ $t('connectionDraft.intro') }}</p>
+      <p class="connection-type-explanation">{{ $t('connectionDraft.typeRule') }}</p>
 
       <form @submit.prevent="previewConnectionDraft">
         <label for="connection-name">{{ $t('connectionDraft.name') }}</label>
@@ -999,6 +1002,9 @@ async function confirmCreation() {
             <code v-if="connectionDraft.sourceDisplayPath">
               {{ connectionDraft.sourceDisplayPath }}
             </code>
+            <span v-if="connectionDraft.sourceType" class="connection-type-badge">
+              {{ $t(`connectionTypes.${connectionDraft.sourceType}`) }}
+            </span>
           </div>
           <button
             type="button"
@@ -1080,6 +1086,12 @@ async function confirmCreation() {
       <p class="intro">{{ $t('connectionDraft.previewIntro') }}</p>
 
       <dl class="draft-preview-paths">
+        <div>
+          <dt>{{ $t('connectionDraft.type') }}</dt>
+          <dd>
+            <strong>{{ $t(`connectionTypes.${connectionDraftPreview.sourceType}`) }}</strong>
+          </dd>
+        </div>
         <div>
           <dt>{{ $t('connectionDraft.configFile') }}</dt>
           <dd>
@@ -1240,6 +1252,12 @@ async function confirmCreation() {
             <span class="state-badge">{{ $t(`inspection.states.${connection.state}`) }}</span>
           </header>
           <dl>
+            <div v-if="connection.sourceType !== 'unknown'">
+              <dt>{{ $t('inspection.type') }}</dt>
+              <dd>
+                <strong>{{ $t(`connectionTypes.${connection.sourceType}`) }}</strong>
+              </dd>
+            </div>
             <div>
               <dt>{{ $t('inspection.source') }}</dt>
               <dd>
@@ -1254,9 +1272,26 @@ async function confirmCreation() {
               </dd>
             </div>
           </dl>
-          <div v-if="connectionPreview(connection)" class="connection-preview-line">
+          <div
+            v-if="connection.state === 'connected'"
+            class="connection-preview-line connection-complete-line"
+          >
             <p>
-              <strong>{{ $t('preview.nextStep') }}</strong>
+              <strong>{{ $t('inspection.connectedReady') }}</strong>
+            </p>
+            <button
+              type="button"
+              class="secondary-action"
+              @click="showConnectionDisconnect(connection)"
+            >
+              {{ $t('disconnect.open') }}
+            </button>
+          </div>
+          <div v-else-if="connectionPreview(connection)" class="connection-preview-line">
+            <p>
+              <strong v-if="connectionPreview(connection).status !== 'ready'">
+                {{ $t('preview.actionNeeded') }}
+              </strong>
               {{
                 $t(
                   `preview.reasons.${
@@ -1270,31 +1305,17 @@ async function confirmCreation() {
             <button
               v-if="connectionPreview(connection).status === 'ready'"
               type="button"
-              class="secondary-action"
+              class="primary-action"
               @click="showConnectionPreview(connection)"
             >
               {{ $t('preview.open') }}
             </button>
           </div>
-          <div v-if="connection.state === 'connected'" class="connection-preview-line">
-            <p>
-              <strong>{{ $t('preview.nextStep') }}</strong>
-              {{ $t('disconnect.available') }}
-            </p>
-            <button
-              type="button"
-              class="secondary-action"
-              @click="showConnectionDisconnect(connection)"
-            >
-              {{ $t('disconnect.open') }}
-            </button>
-          </div>
           <div
             v-if="connection.state === 'targetMissing' && connection.readiness?.status === 'ready'"
-            class="connection-preview-line"
+            class="connection-preview-line connection-secondary-line"
           >
             <p>
-              <strong>{{ $t('preview.nextStep') }}</strong>
               {{ $t('removal.available') }}
             </p>
             <button
@@ -1464,6 +1485,14 @@ async function confirmCreation() {
         <span>{{ $t('preview.proposedOperation') }}</span>
         <strong>{{ $t(`preview.operations.${selectedPreview.preview.operation}`) }}</strong>
         <dl>
+          <div>
+            <dt>{{ $t('preview.type') }}</dt>
+            <dd>
+              <strong>
+                {{ $t(`connectionTypes.${selectedPreview.connection.sourceType}`) }}
+              </strong>
+            </dd>
+          </div>
           <div>
             <dt>{{ $t('preview.source') }}</dt>
             <dd>

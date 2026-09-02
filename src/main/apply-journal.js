@@ -72,6 +72,10 @@ function absolutePath(value, allowRoot = false) {
   )
 }
 
+function sameMacosPath(left, right) {
+  return left.normalize('NFC').toLowerCase() === right.normalize('NFC').toLowerCase()
+}
+
 function validMetadata(value, fields) {
   return keys(value, fields) && fields.every((field) => integer(value[field]))
 }
@@ -189,7 +193,9 @@ export async function openApplyJournal(root, { platform = process.platform } = {
   let rootIdentity
   try {
     const stat = await fs.lstat(root, { bigint: true })
-    if (!privateDirectory(stat) || (await fs.realpath(root)) !== root) fail('journalUnavailable')
+    const canonicalRoot = await fs.realpath(root)
+    if (!privateDirectory(stat) || !sameMacosPath(root, canonicalRoot)) fail('journalUnavailable')
+    root = canonicalRoot
     rootIdentity = { dev: stat.dev, ino: stat.ino }
   } catch {
     fail('journalUnavailable')

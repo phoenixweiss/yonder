@@ -47,6 +47,7 @@ async function inspectDirectPath(root, filename, { allowRoot = false, final = 'd
   const parts = relative ? relative.split(path.sep) : []
   let current = resolvedRoot
   const entries = [{ path: current, last: parts.length === 0 }]
+  let sourceType = ''
   for (const [index, part] of parts.entries()) {
     current = path.join(current, part)
     entries.push({ path: current, last: index === parts.length - 1 })
@@ -62,6 +63,7 @@ async function inspectDirectPath(root, filename, { allowRoot = false, final = 'd
       if (entry.last) {
         if (final === 'source' && !details.isFile() && !details.isDirectory())
           fail('sourceUnsupported')
+        if (final === 'source') sourceType = details.isDirectory() ? 'folder' : 'file'
         if (final === 'directory' && !details.isDirectory()) fail('targetParentUnsafe')
       }
     }
@@ -70,7 +72,7 @@ async function inspectDirectPath(root, filename, { allowRoot = false, final = 'd
     fail(final === 'source' ? 'sourceUnsafe' : 'targetParentUnsafe')
   }
 
-  return { root: resolvedRoot, path: resolvedPath, relative: portable(relative) }
+  return { root: resolvedRoot, path: resolvedPath, relative: portable(relative), sourceType }
 }
 
 function comparable(value) {
@@ -107,13 +109,15 @@ export function createConnectionDraftController({
     sourceSelection = {
       id: randomUUID(),
       storagePath: source.root,
-      relative: source.relative
+      relative: source.relative,
+      sourceType: source.sourceType
     }
     return {
       status: 'ready',
       selectionId: sourceSelection.id,
       relativePath: source.relative,
       displayPath: source.path,
+      sourceType: source.sourceType,
       defaultLinkName: path.basename(source.path)
     }
   }
@@ -211,6 +215,7 @@ export function createConnectionDraftController({
       connection,
       sourcePath: source.path,
       targetPath,
+      sourceType: source.sourceType,
       yaml: stringify([connection], { lineWidth: 0 }).trimEnd()
     }
   }

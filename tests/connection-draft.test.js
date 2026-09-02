@@ -70,6 +70,8 @@ test('previews one exact connection entry without changing any file', async (t) 
   assert.equal(result.configPath, f.configPath)
   assert.equal(result.sourcePath, f.source)
   assert.equal(result.targetPath, join(f.targetParent, 'Documents'))
+  assert.equal(source.sourceType, 'folder')
+  assert.equal(result.sourceType, 'folder')
   assert.deepEqual(result.connection, {
     id: 'documents',
     name: 'Documents',
@@ -94,6 +96,16 @@ test('previews one exact connection entry without changing any file', async (t) 
     },
     before
   )
+})
+
+test('source selection reports file-to-file and folder-to-folder mapping types', async (t) => {
+  const f = await fixture(t)
+  const draft = controller(f.home)
+  const file = join(f.storage, 'Sources', 'example.txt')
+  await writeFile(file, 'example')
+
+  assert.equal((await draft.selectSource(f.storage, file)).sourceType, 'file')
+  assert.equal((await draft.selectSource(f.storage, f.source)).sourceType, 'folder')
 })
 
 test('rejects selections outside the storage or home and symbolic-link redirects', async (t) => {

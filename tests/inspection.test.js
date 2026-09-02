@@ -46,6 +46,7 @@ test('inspects every connection state without changing files', async (t) => {
     connection('target-missing', { macos: '~/.config/target-missing' }),
     connection('target-occupied', { macos: '~/.config/target-occupied' }),
     connection('target-mismatch', { macos: '~/.config/target-mismatch' }),
+    connection('file-target-missing', { macos: '~/.config/file-target-missing' }),
     connection('source-missing', { macos: '~/.config/source-missing' }),
     connection('not-configured', { linux: '~/.config/not-configured' })
   ]
@@ -54,6 +55,7 @@ test('inspects every connection state without changing files', async (t) => {
   for (const id of ['connected', 'target-missing', 'target-occupied', 'target-mismatch']) {
     await mkdir(join(storage, 'sources', id), { recursive: true })
   }
+  await writeFile(join(storage, 'sources', 'file-target-missing'), 'file source')
   await mkdir(join(storage, 'sources', 'not-configured'), { recursive: true })
   await mkdir(join(home, '.config'), { recursive: true })
   await symlink(join(storage, 'sources', 'connected'), join(home, '.config', 'connected'))
@@ -74,6 +76,7 @@ test('inspects every connection state without changing files', async (t) => {
     'target-missing': 'targetMissing',
     'target-occupied': 'targetOccupied',
     'target-mismatch': 'targetMismatch',
+    'file-target-missing': 'targetMissing',
     'source-missing': 'sourceMissing',
     'not-configured': 'notConfigured'
   })
@@ -82,12 +85,16 @@ test('inspects every connection state without changing files', async (t) => {
     'name',
     'readiness',
     'sourcePath',
+    'sourceType',
     'state',
     'targetPath'
   ])
   assert.deepEqual(result.connections.find(({ id }) => id === 'target-missing').readiness, {
     status: 'ready'
   })
+  assert.equal(result.connections.find(({ id }) => id === 'target-missing').sourceType, 'folder')
+  assert.equal(result.connections.find(({ id }) => id === 'file-target-missing').sourceType, 'file')
+  assert.equal(result.connections.find(({ id }) => id === 'source-missing').sourceType, 'unknown')
   assert.deepEqual(after, before)
 })
 

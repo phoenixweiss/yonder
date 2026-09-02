@@ -46,6 +46,24 @@ async function fixture(t) {
   return { directory, journal: await openApplyJournal(directory) }
 }
 
+test('journal accepts canonical case spelling but rejects a journal symlink', mac, async (t) => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(tmpdir(), 'yonder-journal-case-')))
+  t.after(() => fs.rm(root, { recursive: true, force: true }))
+  const canonicalParent = path.join(root, 'Yonder')
+  const requestedParent = path.join(root, 'yonder')
+  const canonicalJournal = path.join(canonicalParent, 'journal')
+  const requestedJournal = path.join(requestedParent, 'journal')
+  await fs.mkdir(canonicalParent)
+
+  const journal = await openApplyJournal(requestedJournal)
+  assert.deepEqual(await journal.readUnresolved(), { status: 'clear' })
+  assert.equal(await fs.realpath(requestedJournal), canonicalJournal)
+
+  const journalLink = path.join(root, 'journal-link')
+  await fs.symlink(canonicalJournal, journalLink)
+  await assert.rejects(openApplyJournal(journalLink), { code: 'journalUnavailable' })
+})
+
 test(
   'journal blocks unresolved work and resolves recorded outcomes append-only',
   mac,

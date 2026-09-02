@@ -96,11 +96,13 @@ async function inspectConnection(connection, context) {
   const sourcePath = pathFromPortableRelative(context.folderPath, connection.source)
   const target = context.platform ? connection.targets[context.platform] : undefined
   const targetPath = target ? pathFromPortableRelative(context.homeDirectory, target.slice(2)) : ''
+  let sourceType = 'unknown'
   const result = (state, readiness = blocked(state)) => ({
     id: connection.id,
     name: connection.name,
     sourcePath,
     targetPath,
+    sourceType,
     state,
     readiness
   })
@@ -122,6 +124,7 @@ async function inspectConnection(connection, context) {
   if (!source.details.isFile() && !source.details.isDirectory()) {
     return result('inspectionFailed', blocked('sourceUnsupported'))
   }
+  sourceType = source.details.isDirectory() ? 'folder' : 'file'
 
   const destination = await pathDetails(targetPath)
   if (destination.status === 'missing') {
