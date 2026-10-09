@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
@@ -107,14 +108,6 @@ export function createConnectionDisconnectController({
       const parentPath = path.dirname(selection.targetPath)
       const parent = selection.directories.find(({ path: value }) => value === parentPath)
       if (!parent) fail('stateChanged')
-      const prepared = await native.prepare({
-        action: 'remove',
-        parent: parent.path,
-        device: parent.dev,
-        inode: parent.ino,
-        source: selection.sourcePath,
-        name: path.basename(selection.targetPath)
-      })
       const current = await stableCandidate(
         selection.storagePath,
         selection.connectionId,
@@ -125,10 +118,11 @@ export function createConnectionDisconnectController({
         await native.clear()
         fail('stateChanged')
       }
-      pending = { token: prepared.token, candidate: structuredClone(candidate), started }
+      const token = randomUUID()
+      pending = { token, candidate: structuredClone(candidate), started }
       return {
         status: 'ready',
-        token: prepared.token,
+        token,
         connection: {
           id: selection.connectionId,
           name: candidate.observation.connection.name,
@@ -165,8 +159,28 @@ export function createConnectionDisconnectController({
         }
         if (!isDeepStrictEqual(candidate, current)) fail('stateChanged')
 
+        const parentPath = path.dirname(selection.targetPath)
+        const parent = selection.directories.find(({ path: value }) => value === parentPath)
+        if (!parent) fail('stateChanged')
+        const prepared = await native.prepare({
+          action: 'remove',
+          parent: parent.path,
+          device: parent.dev,
+          inode: parent.ino,
+          source: selection.sourcePath,
+          name: path.basename(selection.targetPath)
+        })
+        const finalCheck = await stableCandidate(
+          selection.storagePath,
+          selection.connectionId,
+          selection.homePath,
+          platform
+        )
+        if (started !== generation || !isDeepStrictEqual(candidate, finalCheck))
+          fail('stateChanged')
+
         dispatched = true
-        const result = await native.confirm(token)
+        const result = await native.confirm(prepared.token)
         if (result.status !== 'removed') fail('removalUncertain')
         const disconnected = await observeRemoval(candidate)
         generation += 1

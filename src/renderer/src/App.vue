@@ -279,7 +279,7 @@ async function previewConnectionDraft() {
   connectionDraftErrorKey.value = ''
   connectionDraftBusy.value = true
   try {
-    const result = await window.yonder.previewConnectionDraft(
+    const result = await window.yonder.prepareConnectionDraftWrite(
       storageId.value,
       connectionDraft.value.sourceSelectionId,
       connectionDraft.value.targetSelectionId,
@@ -292,36 +292,11 @@ async function previewConnectionDraft() {
       return
     }
     connectionDraftPreview.value = result
-    connectionDraftPreparation.value = null
+    connectionDraftPreparation.value = result
     connectionDraftWriteErrorKey.value = ''
     view.value = 'connection-draft-preview'
   } catch {
     connectionDraftErrorKey.value = 'connectionDraft.errors.unavailable'
-  } finally {
-    connectionDraftBusy.value = false
-  }
-}
-
-async function prepareConnectionDraftWrite() {
-  if (!connectionDraftPreview.value || connectionDraftBusy.value) return
-  connectionDraftWriteErrorKey.value = ''
-  connectionDraftBusy.value = true
-  try {
-    const result = await window.yonder.prepareConnectionDraftWrite(
-      storageId.value,
-      connectionDraft.value.sourceSelectionId,
-      connectionDraft.value.targetSelectionId,
-      connectionDraft.value.name,
-      connectionDraft.value.id,
-      connectionDraft.value.linkName
-    )
-    if (result.status !== 'ready') {
-      connectionDraftWriteErrorKey.value = connectionDraftError(result.status)
-      return
-    }
-    connectionDraftPreparation.value = result
-  } catch {
-    connectionDraftWriteErrorKey.value = 'connectionDraft.errors.unavailable'
   } finally {
     connectionDraftBusy.value = false
   }
@@ -405,13 +380,39 @@ function connectionPreview(connection) {
   return buildConnectionPreview(connection)
 }
 
-function showConnectionPreview(connection) {
+let pendingReview = null
+const cancellingReview = ref(false)
+
+async function loadReview(action) {
+  const task = action()
+  pendingReview = task
+  try {
+    await task
+  } finally {
+    if (pendingReview === task) pendingReview = null
+  }
+}
+
+async function waitForReview() {
+  if (!pendingReview) return true
+  if (cancellingReview.value) return false
+  cancellingReview.value = true
+  try {
+    await pendingReview
+  } finally {
+    cancellingReview.value = false
+  }
+  return true
+}
+
+async function showConnectionPreview(connection) {
   const preview = connectionPreview(connection)
   if (preview?.status !== 'ready') return
   selectedPreview.value = { connection, preview }
   applyPreparation.value = null
   applyError.value = { key: '', recovery: null }
   view.value = 'preview'
+  await loadReview(prepareSelectedConnectionApply)
 }
 
 function connectionApplyErrorKey(status) {
@@ -446,6 +447,10 @@ async function prepareSelectedConnectionApply() {
     )
     if (result.status === 'ready') {
       applyPreparation.value = result
+      selectedPreview.value.connection = {
+        ...selectedPreview.value.connection,
+        ...result.connection
+      }
       return
     }
     applyError.value = {
@@ -492,6 +497,7 @@ async function confirmSelectedConnectionApply() {
 }
 
 async function closeConnectionPreview() {
+  if (!(await waitForReview())) return
   if (applyBusy.value) return
   if (applyPreparation.value?.token) {
     applyBusy.value = true
@@ -531,11 +537,12 @@ function connectionDisconnectErrorKey(status) {
   return keys[status] ?? 'disconnect.errors.unavailable'
 }
 
-function showConnectionDisconnect(connection) {
+async function showConnectionDisconnect(connection) {
   selectedDisconnect.value = connection
   disconnectPreparation.value = null
   disconnectErrorKey.value = ''
   view.value = 'disconnect'
+  await loadReview(prepareSelectedConnectionDisconnect)
 }
 
 async function prepareSelectedConnectionDisconnect() {
@@ -549,6 +556,7 @@ async function prepareSelectedConnectionDisconnect() {
     )
     if (result.status === 'ready') {
       disconnectPreparation.value = result
+      selectedDisconnect.value = { ...selectedDisconnect.value, ...result.connection }
       return
     }
     disconnectErrorKey.value = connectionDisconnectErrorKey(result.status)
@@ -589,6 +597,7 @@ async function confirmSelectedConnectionDisconnect() {
 }
 
 async function closeConnectionDisconnect() {
+  if (!(await waitForReview())) return
   if (disconnectBusy.value) return
   if (disconnectPreparation.value?.token) {
     disconnectBusy.value = true
@@ -629,11 +638,12 @@ function connectionRemovalErrorKey(status) {
   return keys[status] ?? 'removal.errors.unavailable'
 }
 
-function showConnectionRemoval(connection) {
+async function showConnectionRemoval(connection) {
   selectedRemoval.value = connection
   removalPreparation.value = null
   removalErrorKey.value = ''
   view.value = 'removal'
+  await loadReview(prepareSelectedConnectionRemoval)
 }
 
 async function prepareSelectedConnectionRemoval() {
@@ -647,6 +657,7 @@ async function prepareSelectedConnectionRemoval() {
     )
     if (result.status === 'ready') {
       removalPreparation.value = result
+      selectedRemoval.value = result.connection
       return
     }
     removalErrorKey.value = connectionRemovalErrorKey(result.status)
@@ -687,6 +698,7 @@ async function confirmSelectedConnectionRemoval() {
 }
 
 async function closeConnectionRemoval() {
+  if (!(await waitForReview())) return
   if (removalBusy.value) return
   if (removalPreparation.value?.token) {
     removalBusy.value = true
@@ -981,17 +993,20 @@ async function confirmCreation() {
           @input="updateConnectionDraftName"
         />
 
-        <label for="connection-id">{{ $t('connectionDraft.id') }}</label>
-        <input
-          id="connection-id"
-          v-model="connectionDraft.id"
-          type="text"
-          maxlength="64"
-          spellcheck="false"
-          :disabled="connectionDraftBusy"
-          @input="editConnectionDraftId"
-        />
-        <p class="field-hint">{{ $t('connectionDraft.idHint') }}</p>
+        <details>
+          <summary>{{ $t('connectionDraft.id') }}</summary>
+          <label for="connection-id">{{ $t('connectionDraft.id') }}</label>
+          <input
+            id="connection-id"
+            v-model="connectionDraft.id"
+            type="text"
+            maxlength="64"
+            spellcheck="false"
+            :disabled="connectionDraftBusy"
+            @input="editConnectionDraftId"
+          />
+          <p class="field-hint">{{ $t('connectionDraft.idHint') }}</p>
+        </details>
 
         <div class="draft-picker">
           <div>
@@ -1112,24 +1127,16 @@ async function confirmCreation() {
         </div>
       </dl>
 
-      <div class="draft-yaml-preview">
-        <span>{{ $t('connectionDraft.yamlEntry') }}</span>
+      <details class="draft-yaml-preview">
+        <summary>{{ $t('connectionDraft.yamlEntry') }}</summary>
         <pre><code>{{ connectionDraftPreview.yaml }}</code></pre>
-      </div>
+      </details>
       <p class="preview-effect">{{ $t('connectionDraft.previewEffect') }}</p>
       <p class="preview-unchanged">{{ $t('connectionDraft.previewUnchanged') }}</p>
-      <p class="preview-note">{{ $t('connectionDraft.previewNote') }}</p>
 
       <p v-if="connectionDraftWriteErrorKey" class="flow-error" role="alert">
         {{ $t(connectionDraftWriteErrorKey) }}
       </p>
-
-      <div v-if="connectionDraftPreparation" class="draft-write-confirmation">
-        <h3>{{ $t('connectionDraft.confirmTitle') }}</h3>
-        <p>{{ $t('connectionDraft.confirmEffect') }}</p>
-        <code>{{ connectionDraftPreparation.configPath }}</code>
-        <p>{{ $t('connectionDraft.confirmUnchanged') }}</p>
-      </div>
 
       <div v-if="connectionDraftPreparation" class="flow-actions">
         <button
@@ -1146,25 +1153,21 @@ async function confirmCreation() {
           type="button"
           class="secondary-action"
           :disabled="connectionDraftBusy"
-          @click="cancelConnectionDraftPreparation"
+          @click="closeConnectionDraft"
         >
           {{ $t('connectionDraft.cancelWrite') }}
+        </button>
+        <button
+          type="button"
+          class="secondary-action"
+          :disabled="connectionDraftBusy"
+          @click="editConnectionDraft"
+        >
+          {{ $t('connectionDraft.edit') }}
         </button>
       </div>
 
       <template v-else>
-        <button
-          type="button"
-          class="primary-action draft-prepare-action"
-          :disabled="connectionDraftBusy"
-          @click="prepareConnectionDraftWrite"
-        >
-          {{
-            connectionDraftBusy
-              ? $t('connectionDraft.preparingWrite')
-              : $t('connectionDraft.prepareWrite')
-          }}
-        </button>
         <div class="flow-actions">
           <button
             type="button"
@@ -1195,7 +1198,7 @@ async function confirmCreation() {
         <div class="dashboard-actions">
           <button
             type="button"
-            class="primary-action"
+            class="secondary-action"
             :disabled="checking || busy"
             @click="recheckStorage"
           >
@@ -1338,7 +1341,7 @@ async function confirmCreation() {
       <h2 id="removal-title">{{ $t('removal.title') }}</h2>
       <p class="intro">{{ $t('removal.intro', { name: selectedRemoval.name }) }}</p>
 
-      <div class="preview-panel">
+      <div v-if="removalPreparation" class="preview-panel">
         <span>{{ $t('preview.proposedOperation') }}</span>
         <strong>{{ $t('removal.operation') }}</strong>
         <dl>
@@ -1359,15 +1362,7 @@ async function confirmCreation() {
 
       <p class="preview-effect">{{ $t('removal.effect') }}</p>
       <p class="preview-unchanged">{{ $t('removal.unchanged') }}</p>
-      <p class="preview-note">{{ $t('removal.note') }}</p>
-
-      <div v-if="removalPreparation" class="apply-confirmation" role="status">
-        <strong>{{ $t('removal.readyTitle') }}</strong>
-        <p>{{ $t('removal.readyText') }}</p>
-        <small
-          >{{ $t('removal.checkedAt') }} <code>{{ removalPreparation.checkedAt }}</code></small
-        >
-      </div>
+      <p v-if="removalBusy && !removalPreparation" role="status">{{ $t('removal.preparing') }}</p>
 
       <p v-if="removalErrorKey" class="flow-error apply-error" role="alert">
         {{ $t(removalErrorKey) }}
@@ -1375,19 +1370,10 @@ async function confirmCreation() {
 
       <div class="flow-actions preview-actions">
         <button
-          v-if="!removalPreparation && !removalErrorKey"
-          type="button"
-          class="primary-action"
-          :disabled="removalBusy"
-          @click="prepareSelectedConnectionRemoval"
-        >
-          {{ removalBusy ? $t('removal.preparing') : $t('removal.prepare') }}
-        </button>
-        <button
           v-if="removalPreparation"
           type="button"
           class="danger-action"
-          :disabled="removalBusy"
+          :disabled="removalBusy || cancellingReview"
           @click="confirmSelectedConnectionRemoval"
         >
           {{ removalBusy ? $t('removal.removing') : $t('removal.confirm') }}
@@ -1395,7 +1381,7 @@ async function confirmCreation() {
         <button
           type="button"
           class="secondary-action"
-          :disabled="removalBusy"
+          :disabled="cancellingReview || (removalBusy && !!removalPreparation)"
           @click="closeConnectionRemoval"
         >
           {{ removalPreparation ? $t('removal.cancel') : $t('removal.back') }}
@@ -1411,7 +1397,7 @@ async function confirmCreation() {
       <h2 id="disconnect-title">{{ $t('disconnect.title') }}</h2>
       <p class="intro">{{ $t('disconnect.intro', { name: selectedDisconnect.name }) }}</p>
 
-      <div class="preview-panel">
+      <div v-if="disconnectPreparation" class="preview-panel">
         <span>{{ $t('preview.proposedOperation') }}</span>
         <strong>{{ $t('disconnect.operation') }}</strong>
         <dl>
@@ -1432,16 +1418,9 @@ async function confirmCreation() {
 
       <p class="preview-effect">{{ $t('disconnect.effect') }}</p>
       <p class="preview-unchanged">{{ $t('disconnect.unchanged') }}</p>
-      <p class="preview-note">{{ $t('disconnect.note') }}</p>
-
-      <div v-if="disconnectPreparation" class="apply-confirmation" role="status">
-        <strong>{{ $t('disconnect.readyTitle') }}</strong>
-        <p>{{ $t('disconnect.readyText') }}</p>
-        <small
-          >{{ $t('disconnect.checkedAt') }}
-          <code>{{ disconnectPreparation.checkedAt }}</code></small
-        >
-      </div>
+      <p v-if="disconnectBusy && !disconnectPreparation" role="status">
+        {{ $t('disconnect.preparing') }}
+      </p>
 
       <p v-if="disconnectErrorKey" class="flow-error apply-error" role="alert">
         {{ $t(disconnectErrorKey) }}
@@ -1449,19 +1428,10 @@ async function confirmCreation() {
 
       <div class="flow-actions preview-actions">
         <button
-          v-if="!disconnectPreparation && !disconnectErrorKey"
-          type="button"
-          class="primary-action"
-          :disabled="disconnectBusy"
-          @click="prepareSelectedConnectionDisconnect"
-        >
-          {{ disconnectBusy ? $t('disconnect.preparing') : $t('disconnect.prepare') }}
-        </button>
-        <button
           v-if="disconnectPreparation"
           type="button"
           class="danger-action"
-          :disabled="disconnectBusy"
+          :disabled="disconnectBusy || cancellingReview"
           @click="confirmSelectedConnectionDisconnect"
         >
           {{ disconnectBusy ? $t('disconnect.disconnecting') : $t('disconnect.confirm') }}
@@ -1469,7 +1439,7 @@ async function confirmCreation() {
         <button
           type="button"
           class="secondary-action"
-          :disabled="disconnectBusy"
+          :disabled="cancellingReview || (disconnectBusy && !!disconnectPreparation)"
           @click="closeConnectionDisconnect"
         >
           {{ disconnectPreparation ? $t('disconnect.cancel') : $t('disconnect.back') }}
@@ -1481,7 +1451,7 @@ async function confirmCreation() {
       <h2 id="preview-title">{{ $t('preview.title') }}</h2>
       <p class="intro">{{ $t('preview.intro', { name: selectedPreview.connection.name }) }}</p>
 
-      <div class="preview-panel">
+      <div v-if="applyPreparation" class="preview-panel">
         <span>{{ $t('preview.proposedOperation') }}</span>
         <strong>{{ $t(`preview.operations.${selectedPreview.preview.operation}`) }}</strong>
         <dl>
@@ -1510,15 +1480,7 @@ async function confirmCreation() {
 
       <p class="preview-effect">{{ $t('preview.effect') }}</p>
       <p class="preview-unchanged">{{ $t('preview.unchanged') }}</p>
-      <p class="preview-note">{{ $t('preview.note') }}</p>
-
-      <div v-if="applyPreparation" class="apply-confirmation" role="status">
-        <strong>{{ $t('apply.readyTitle') }}</strong>
-        <p>{{ $t('apply.readyText') }}</p>
-        <small
-          >{{ $t('apply.checkedAt') }} <code>{{ applyPreparation.checkedAt }}</code></small
-        >
-      </div>
+      <p v-if="applyBusy && !applyPreparation" role="status">{{ $t('apply.preparing') }}</p>
 
       <p v-if="applyError.key" class="flow-error apply-error" role="alert">
         {{ $t(applyError.key) }}
@@ -1545,19 +1507,10 @@ async function confirmCreation() {
 
       <div class="flow-actions preview-actions">
         <button
-          v-if="!applyPreparation && !applyError.key"
-          type="button"
-          class="primary-action"
-          :disabled="applyBusy"
-          @click="prepareSelectedConnectionApply"
-        >
-          {{ applyBusy ? $t('apply.preparing') : $t('apply.prepare') }}
-        </button>
-        <button
           v-if="applyPreparation"
           type="button"
           class="primary-action"
-          :disabled="applyBusy"
+          :disabled="applyBusy || cancellingReview"
           @click="confirmSelectedConnectionApply"
         >
           {{ applyBusy ? $t('apply.applying') : $t('apply.confirm') }}
@@ -1565,7 +1518,7 @@ async function confirmCreation() {
         <button
           type="button"
           class="secondary-action"
-          :disabled="applyBusy"
+          :disabled="cancellingReview || (applyBusy && !!applyPreparation)"
           @click="closeConnectionPreview"
         >
           {{ applyPreparation ? $t('apply.cancel') : $t('preview.back') }}

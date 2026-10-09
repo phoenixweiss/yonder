@@ -59,7 +59,7 @@ function encode(request) {
 function start(request) {
   const child = spawn(build.executable, [], {
     cwd: '/',
-    env: { LANG: 'C', LC_ALL: 'C' },
+    env: { LANG: 'C', LC_ALL: 'C', PATH: '/usr/bin:/bin' },
     shell: false,
     stdio: ['pipe', 'pipe', 'pipe']
   })

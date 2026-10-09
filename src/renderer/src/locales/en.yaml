@@ -20,7 +20,7 @@ creation:
   name: Storage name
   effect: Yonder will create only this new yonder.yaml. It will not move files, create links, or replace anything.
   openAfterCreation: Open this storage after creation
-  confirm: Create yonder.yaml
+  confirm: Create storage
   creating: Creating…
   selecting: Choosing…
   back: Back
@@ -72,7 +72,7 @@ connectionDraft:
   name: Connection name
   id: Identifier
   idHint: Lowercase letters, numbers, and hyphens. The identifier stays stable if the display name changes later.
-  source: Source in storage
+  source: Source
   chooseSource: Choose source…
   targetParent: Destination folder on this Mac
   chooseTargetParent: Choose folder…
@@ -83,12 +83,12 @@ connectionDraft:
   review: Review connection
   checking: Checking…
   back: Back to storage
-  previewTitle: Connection draft preview
+  previewTitle: Save connection
   previewIntro: Review the exact paths and proposed YAML entry. Nothing has been written.
   configFile: Configuration file
-  destination: Destination on this computer
+  destination: Destination
   yamlEntry: Proposed YAML entry
-  previewEffect: Preparing the update rereads the source, destination folder, and configuration before enabling the final confirmation.
+  previewEffect: Save this connection to yonder.yaml. Then select Connect in the storage to create its symbolic link.
   previewUnchanged: The confirmed update changes only yonder.yaml by adding this entry. It does not create folders or links, or move, delete, or replace other files.
   previewNote: Preparation is not write authority. A one-time final confirmation is required before yonder.yaml changes.
   prepareWrite: Prepare configuration update
@@ -96,10 +96,10 @@ connectionDraft:
   confirmTitle: Ready to update yonder.yaml
   confirmEffect: Fresh checks passed. Confirming will replace only this configuration with a validated version containing the proposed entry.
   confirmUnchanged: No symbolic link will be created automatically. Applying the connection remains a separate action.
-  confirmWrite: Add to yonder.yaml
+  confirmWrite: Save connection
   writing: Updating…
   cancelWrite: Cancel
-  created: The connection was added to yonder.yaml. No symbolic link was created.
+  created: Connection saved. Select Connect to create its symbolic link.
   createdRefreshFailed: The connection was added to yonder.yaml, but the refreshed storage could not be displayed. Open the storage again before continuing.
   edit: Back to draft
   errors:
@@ -157,15 +157,15 @@ removal:
   title: Remove connection from configuration
   intro: Review the exact configuration entry that would be removed for “{{name}}”.
   operation: Remove one yonder.yaml entry
-  effect: After fresh checks, Yonder will atomically remove only this disconnected connection definition from yonder.yaml.
-  unchanged: The source, destination folder, every filesystem entry, and every other connection remain unchanged.
+  effect: Remove this saved connection from yonder.yaml. It will no longer appear in this storage.
+  unchanged: All files and folders will be kept. Other connections remain unchanged.
   note: This screen is a read-only preview. Preparation rereads the configuration, source, and absent destination; one final confirmation is still required.
   prepare: Prepare removal
-  preparing: Checking again…
+  preparing: Loading review…
   readyTitle: Fresh checks completed
   readyText: The expected macOS destination is still absent. Confirm once to replace only yonder.yaml without deleting data.
   checkedAt: 'Checked at:'
-  confirm: Remove this definition
+  confirm: Remove from configuration
   removing: Updating configuration…
   cancel: Cancel removal
   back: Back to storage
@@ -192,11 +192,11 @@ disconnect:
   unchanged: The source, yonder.yaml, destination folder, and every other file or link remain unchanged.
   note: This screen is not removal authority. Preparation performs fresh main-process and anchored native checks; one final confirmation is still required.
   prepare: Prepare disconnect
-  preparing: Checking again…
+  preparing: Loading review…
   readyTitle: Fresh checks completed
   readyText: The verified destination folder is held open. Confirm once to remove exactly this matching symbolic link.
   checkedAt: 'Checked at:'
-  confirm: Remove this link
+  confirm: Disconnect
   disconnecting: Removing link…
   cancel: Cancel disconnect
   back: Back to storage

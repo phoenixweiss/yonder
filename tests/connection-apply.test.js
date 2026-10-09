@@ -7,7 +7,7 @@ import { stringify } from 'yaml'
 import { openApplyJournal } from '../src/main/apply-journal.js'
 import { createConnectionApplyController } from '../src/main/connection-apply.js'
 import { NativeLinkError } from '../src/main/native-link-process.js'
-import { nativeHelperFixture } from './helpers/native-helper.js'
+import { nativeHelperFixture, createSanitizedNativeLinkProcess } from './helpers/native-helper.js'
 
 const mac = { skip: process.platform !== 'darwin' }
 let build
@@ -18,7 +18,11 @@ before(async () => {
 
 after(async () => build?.cleanup())
 
-async function fixture(t, createProcess, { storageInsideHome = false, targetName } = {}) {
+async function fixture(
+  t,
+  createProcess = createSanitizedNativeLinkProcess,
+  { storageInsideHome = false, targetName } = {}
+) {
   const root = await fs.realpath(await fs.mkdtemp(path.join(tmpdir(), 'yonder-apply-test-')))
   t.after(() => fs.rm(root, { recursive: true, force: true }))
   const home = path.join(root, 'home')
@@ -85,6 +89,62 @@ test('cancel and state changes before confirmation create no link', mac, async (
   await assert.rejects(changed.controller.confirm(second.token), { code: 'stateChanged' })
   await assert.rejects(fs.lstat(changed.target), { code: 'ENOENT' })
   assert.deepEqual(await changed.journal.readUnresolved(), { status: 'clear' })
+})
+
+test(
+  'review starts no native deadline; confirmation uses a separate native token',
+  mac,
+  async (t) => {
+    let f
+    let starts = 0
+    const nativeToken = '00000000-0000-0000-0000-000000000001'
+    f = await fixture(t, () => ({
+      async prepare() {
+        starts++
+        return { token: nativeToken }
+      },
+      async confirm(token) {
+        assert.equal(token, nativeToken)
+        await fs.symlink(f.source, f.target)
+        return { status: 'created' }
+      },
+      async clear() {}
+    }))
+    const review = await f.controller.prepare(f.storage, 'editor', f.home)
+    assert.equal(starts, 0)
+    assert.notEqual(review.token, nativeToken)
+    assert.equal((await f.controller.confirm(review.token)).status, 'connected')
+    assert.equal(starts, 1)
+  }
+)
+
+test('a change during just-in-time native preparation blocks dispatch', mac, async (t) => {
+  let f
+  f = await fixture(t, () => ({
+    async prepare() {
+      await fs.writeFile(f.source, 'changed during native preparation')
+      return { token: 'native' }
+    },
+    async confirm() {
+      assert.fail('must not dispatch a changed review')
+    },
+    async clear() {}
+  }))
+  const review = await f.controller.prepare(f.storage, 'editor', f.home)
+  await assert.rejects(f.controller.confirm(review.token), { code: 'stateChanged' })
+  await assert.rejects(fs.lstat(f.target), { code: 'ENOENT' })
+  assert.deepEqual(await f.journal.readUnresolved(), { status: 'clear' })
+})
+
+test('the same review flow connects a folder without changing its contents', mac, async (t) => {
+  const f = await fixture(t)
+  await fs.unlink(f.source)
+  await fs.mkdir(f.source)
+  await fs.writeFile(path.join(f.source, 'settings'), 'folder fixture')
+  const review = await f.controller.prepare(f.storage, 'editor', f.home)
+  assert.equal(review.connection.sourceType, 'folder')
+  await f.controller.confirm(review.token)
+  assert.equal(await fs.readFile(path.join(f.target, 'settings'), 'utf8'), 'folder fixture')
 })
 
 test('a conflict appearing after preparation is preserved', mac, async (t) => {

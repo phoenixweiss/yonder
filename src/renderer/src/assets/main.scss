@@ -307,7 +307,7 @@ footer {
 .connection-draft-flow label,
 .draft-picker span,
 .draft-preview-paths dt,
-.draft-yaml-preview > span {
+.draft-yaml-preview > summary {
   color: var(--neutral);
   font-size: 12.5px;
   font-weight: 550;
@@ -491,6 +491,15 @@ code {
   background: #ffffff;
   border: 1px solid var(--secondary-border);
   border-radius: 5px;
+}
+
+.connection-draft-flow summary {
+  cursor: pointer;
+  color: var(--neutral);
+}
+
+.connection-draft-flow details[open] > summary {
+  margin-bottom: 8px;
 }
 
 .draft-yaml-preview pre {

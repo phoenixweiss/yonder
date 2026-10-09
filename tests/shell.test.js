@@ -228,7 +228,8 @@ test('connection apply exposes only selection ids and one-time confirmation toke
   ])
 
   assert.match(appSource, /showConnectionPreview/)
-  assert.match(appSource, /preview\.note/)
+  assert.match(appSource, /await loadReview\(prepareSelectedConnectionApply\)/)
+  assert.doesNotMatch(appSource, /@click="prepareSelectedConnectionApply"/)
   assert.match(appSource, /prepareConnectionApply\([\s\S]*?storageId\.value[\s\S]*?connection\.id/)
   assert.match(appSource, /confirmConnectionApply\(token\)/)
   assert.match(preloadSource, /connection:prepare-apply/)
@@ -269,7 +270,7 @@ test('connection authoring separates preview from a one-time configuration confi
 
   assert.match(appSource, /showConnectionDraft/)
   assert.match(appSource, /connectionDraft\.readOnlyNote/)
-  assert.match(appSource, /connectionDraft\.previewNote/)
+  assert.doesNotMatch(appSource, /@click="prepareConnectionDraftWrite"/)
   assert.match(appSource, /prepareConnectionDraftWrite\(/)
   assert.match(appSource, /confirmConnectionDraftWrite\(token\)/)
   assert.match(preloadSource, /connection:choose-draft-source/)

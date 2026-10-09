@@ -147,6 +147,7 @@ export function createConnectionAuthoringController({
         connection: candidate.preview.connection,
         sourcePath: candidate.preview.sourcePath,
         targetPath: candidate.preview.targetPath,
+        sourceType: candidate.preview.sourceType,
         yaml: candidate.preview.yaml
       }
     })

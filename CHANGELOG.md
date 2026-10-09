@@ -8,6 +8,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Connection actions now load their review automatically and require only one final
+  confirmation. Fresh filesystem checks still run before any change.
+- Saving a connection makes the separate Connect action explicit. Advanced identifiers
+  and YAML previews are collapsed, and manual rechecking is a secondary action.
+
+### Fixed
+
+- Native link helpers start only after confirmation, so reading a review does not
+  consume the helper's short execution deadline.
+
 ## [0.1.4] - 2026-09-03
 
 ### Fixed

@@ -1,9 +1,19 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import fs from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { createNativeLinkProcess } from '../../src/main/native-link-process.js'
+
+// Sanitized test binaries need Apple's symbolizer on PATH; production helpers do not.
+export function createSanitizedNativeLinkProcess(options) {
+  return createNativeLinkProcess({
+    ...options,
+    spawnProcess: (executable, args, settings) =>
+      spawn(executable, args, { ...settings, env: { ...settings.env, PATH: '/usr/bin:/bin' } })
+  })
+}
 
 export async function nativeHelperFixture() {
   const root = await fs.mkdtemp(path.join(tmpdir(), 'yonder-native-build-'))

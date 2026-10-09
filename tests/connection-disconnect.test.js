@@ -6,7 +6,7 @@ import test, { after, before } from 'node:test'
 import { stringify } from 'yaml'
 import { createConnectionDisconnectController } from '../src/main/connection-disconnect.js'
 import { NativeLinkError } from '../src/main/native-link-process.js'
-import { nativeHelperFixture } from './helpers/native-helper.js'
+import { nativeHelperFixture, createSanitizedNativeLinkProcess } from './helpers/native-helper.js'
 
 const mac = { skip: process.platform !== 'darwin' }
 let build
@@ -17,7 +17,7 @@ before(async () => {
 
 after(async () => build?.cleanup())
 
-async function fixture(t, createProcess) {
+async function fixture(t, createProcess = createSanitizedNativeLinkProcess) {
   const root = await fs.realpath(await fs.mkdtemp(path.join(tmpdir(), 'yonder-disconnect-test-')))
   t.after(() => fs.rm(root, { recursive: true, force: true }))
   const home = path.join(root, 'home')
@@ -93,6 +93,24 @@ test('a changed configuration blocks removal and preserves the link', mac, async
   assert.equal(await fs.readlink(f.target), f.source)
 })
 
+test('a replaced link during native preparation is preserved without dispatch', mac, async (t) => {
+  let f
+  f = await fixture(t, () => ({
+    async prepare() {
+      await fs.unlink(f.target)
+      await fs.symlink(f.source, f.target)
+      return { token: 'native' }
+    },
+    async confirm() {
+      assert.fail('must not remove a replaced link')
+    },
+    async clear() {}
+  }))
+  const review = await f.controller.prepare(f.storage, 'editor', f.home)
+  await assert.rejects(f.controller.confirm(review.token), { code: 'stateChanged' })
+  assert.equal(await fs.readlink(f.target), f.source)
+})
+
 test('a replaced link is never removed', mac, async (t) => {
   const f = await fixture(t)
   const prepared = await f.controller.prepare(f.storage, 'editor', f.home)
@@ -114,6 +132,17 @@ test('a non-link destination is rejected and preserved', mac, async (t) => {
     code: 'notConnected'
   })
   assert.equal(await fs.readFile(f.target, 'utf8'), 'keep me')
+})
+
+test('disconnecting a folder link preserves the source folder and contents', mac, async (t) => {
+  const f = await fixture(t)
+  await fs.unlink(f.source)
+  await fs.mkdir(f.source)
+  await fs.writeFile(path.join(f.source, 'settings'), 'folder fixture')
+  const review = await f.controller.prepare(f.storage, 'editor', f.home)
+  await f.controller.confirm(review.token)
+  await assert.rejects(fs.lstat(f.target), { code: 'ENOENT' })
+  assert.equal(await fs.readFile(path.join(f.source, 'settings'), 'utf8'), 'folder fixture')
 })
 
 test(
@@ -138,11 +167,12 @@ test(
     const f = await fixture(t, createProcess)
     target = f.target
     const prepared = await f.controller.prepare(f.storage, 'editor', f.home)
-    assert.equal(preparedAction, 'remove')
+    assert.equal(preparedAction, undefined)
     assert.deepEqual(await f.controller.confirm(prepared.token), {
       status: 'disconnected',
       connectionId: 'editor'
     })
+    assert.equal(preparedAction, 'remove')
     await assert.rejects(fs.lstat(f.target), { code: 'ENOENT' })
   }
 )

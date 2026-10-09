@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -289,14 +289,6 @@ export function createConnectionApplyController({
       const parentPath = path.dirname(candidate.selection.targetPath)
       const parent = candidate.selection.directories.find(({ path: value }) => value === parentPath)
       if (!parent) fail('stateChanged')
-      const prepared = await native.prepare({
-        action: 'create',
-        parent: parent.path,
-        device: parent.dev,
-        inode: parent.ino,
-        source: candidate.selection.sourcePath,
-        name: path.basename(candidate.selection.targetPath)
-      })
       const current = await captureStableConnectionObservation(
         storagePath,
         connectionId,
@@ -309,13 +301,15 @@ export function createConnectionApplyController({
       }
       requireReady(current)
       await destinationMissing(current.selection.targetPath)
-      pending = { token: prepared.token, candidate: structuredClone(candidate), started }
+      const token = randomUUID()
+      pending = { token, candidate: structuredClone(candidate), started }
       return {
         status: 'ready',
-        token: prepared.token,
+        token,
         connection: {
           id: connectionId,
           name: candidate.connection.name,
+          sourceType: candidate.connection.sourceType,
           sourcePath: candidate.selection.sourcePath,
           targetPath: candidate.selection.targetPath
         },
@@ -352,6 +346,21 @@ export function createConnectionApplyController({
         requireReady(current)
         await destinationMissing(current.selection.targetPath)
 
+        // Start the short-lived native helper only after the user confirms the review.
+        const parentPath = path.dirname(candidate.selection.targetPath)
+        const parent = candidate.selection.directories.find(
+          ({ path: value }) => value === parentPath
+        )
+        if (!parent) fail('stateChanged')
+        const prepared = await native.prepare({
+          action: 'create',
+          parent: parent.path,
+          device: parent.dev,
+          inode: parent.ino,
+          source: candidate.selection.sourcePath,
+          name: path.basename(candidate.selection.targetPath)
+        })
+
         const begun = await journal.begin(structuredClone(candidate.selection))
         operation = begun.operation
         const finalCheck = await captureStableConnectionObservation(
@@ -367,7 +376,7 @@ export function createConnectionApplyController({
         await destinationMissing(finalCheck.selection.targetPath)
 
         dispatched = true
-        const result = await native.confirm(token)
+        const result = await native.confirm(prepared.token)
         if (result.status !== 'created') fail('creationUncertain')
         const connected = await captureStableConnectionObservation(
           candidate.selection.storagePath,
