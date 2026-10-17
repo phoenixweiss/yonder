@@ -54,7 +54,7 @@ checking the storage before another change.
 ## Download
 
 Yonder is an early public preview. The current release is
-[Yonder 0.2.0](https://github.com/phoenixweiss/yonder/releases/tag/v0.2.0) for
+[Yonder 0.3.0](https://github.com/phoenixweiss/yonder/releases/tag/v0.3.0) for
 Apple silicon Macs running macOS 13 or later.
 
 The macOS bundle is ad-hoc signed for integrity, but it is not yet Developer ID
