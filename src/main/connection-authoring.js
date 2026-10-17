@@ -10,6 +10,7 @@ import {
   replaceConfiguration
 } from './configuration-write.js'
 import { ConnectionDraftError } from './connection-draft.js'
+import { ConnectionApplyError } from './connection-apply.js'
 
 const snapshotFields = ['dev', 'ino', 'mode', 'size', 'mtimeNs', 'ctimeNs', 'nlink']
 
@@ -83,7 +84,8 @@ function nextConfigurationSource(originalSource, connection) {
 
 export function createConnectionAuthoringController({
   previewDraft,
-  replace = replaceConfiguration
+  replace = replaceConfiguration,
+  connector
 }) {
   let pending = null
   let busy = false
@@ -139,10 +141,12 @@ export function createConnectionAuthoringController({
       if (started !== generation) fail('selectionExpired')
 
       const token = randomUUID()
-      pending = { token, started, candidate }
+      const connectToken = connector ? randomUUID() : null
+      pending = { token, connectToken, started, candidate }
       return {
         status: 'ready',
         token,
+        connectToken,
         configPath: candidate.configPath,
         connection: candidate.preview.connection,
         sourcePath: candidate.preview.sourcePath,
@@ -153,9 +157,14 @@ export function createConnectionAuthoringController({
     })
   }
 
-  async function confirm(token) {
+  async function confirm(token, mode = 'save') {
     return exclusive(async () => {
-      if (typeof token !== 'string' || !pending || pending.token !== token) {
+      if (
+        !['save', 'connect'].includes(mode) ||
+        typeof token !== 'string' ||
+        !pending ||
+        (mode === 'connect' ? pending.connectToken : pending.token) !== token
+      ) {
         fail('selectionExpired')
       }
 
@@ -165,11 +174,42 @@ export function createConnectionAuthoringController({
 
       const current = await stableCandidate(candidate.storagePath, candidate.request)
       if (!isDeepStrictEqual(current, candidate)) fail('stateChanged')
+      if (mode === 'connect') {
+        if (!connector || current.selection.target.status !== 'missing') fail('stateChanged')
+        try {
+          await connector.preflight()
+        } catch (error) {
+          // No configuration write has been attempted yet.
+          fail(error instanceof ConnectionApplyError ? error.code : 'unavailable')
+        }
+      }
       await replace(current, async () => {
+        if (started !== generation) fail('selectionExpired')
         const finalCheck = await stableCandidate(candidate.storagePath, candidate.request)
         if (!isDeepStrictEqual(finalCheck, candidate)) fail('stateChanged')
       })
       generation += 1
+      if (mode === 'connect') {
+        try {
+          if (started + 1 !== generation) fail('selectionExpired')
+          const connected = await connector.connect(candidate)
+          if (connected.status !== 'connected') throw new ConnectionApplyError('creationUncertain')
+          return { status: 'connected', connectionId: candidate.preview.connection.id }
+        } catch (error) {
+          const known =
+            error instanceof ConnectionApplyError || error instanceof ConnectionAuthoringError
+          return {
+            status: 'savedNotConnected',
+            connectionId: candidate.preview.connection.id,
+            reason: known ? error.code : 'creationUncertain',
+            uncertain:
+              !known ||
+              ['creationUncertain', 'journalWriteUncertain', 'recoveryRequired'].includes(
+                error.code
+              )
+          }
+        }
+      }
       return { status: 'created', connectionId: candidate.preview.connection.id }
     })
   }

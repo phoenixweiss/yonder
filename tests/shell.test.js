@@ -284,7 +284,8 @@ test('connection authoring separates preview from a one-time configuration confi
   assert.match(mainSource, /draftController\.selectTargetParent/)
   assert.match(mainSource, /draftController\.preview\(draftStorage\.folderPath/)
   assert.match(mainSource, /authoringController\.prepare\(draftStorage\.folderPath/)
-  assert.match(mainSource, /authoringController\.confirm\(token\)/)
+  assert.match(mainSource, /authoringController\.confirm\(token, mode\)/)
+  assert.match(preloadSource, /connection:confirm-draft-and-connect/)
 })
 
 test('connection disconnect exposes only identifiers and one-time confirmation tokens', async () => {

@@ -493,6 +493,18 @@ code {
   border-radius: 5px;
 }
 
+.draft-back-action {
+  min-height: 32px;
+  margin: 5px 0;
+  padding: 3px 0;
+  color: var(--content);
+  background: transparent;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+}
+
 .connection-draft-flow summary {
   cursor: pointer;
   color: var(--neutral);

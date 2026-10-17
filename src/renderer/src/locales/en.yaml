@@ -83,20 +83,37 @@ connectionDraft:
   review: Review connection
   checking: Checking…
   back: Back to storage
-  previewTitle: Save connection
-  previewIntro: Review the exact paths and proposed YAML entry. Nothing has been written.
+  previewTitle: Review connection
+  previewIntro: Review the paths, then connect now or save for later.
   configFile: Configuration file
   destination: Destination
   yamlEntry: Proposed YAML entry
   previewEffect: Save this connection to yonder.yaml. Then select Connect in the storage to create its symbolic link.
-  previewUnchanged: The confirmed update changes only yonder.yaml by adding this entry. It does not create folders or links, or move, delete, or replace other files.
+  previewUnchanged: Source files stay in place. Yonder will not create folders or replace an occupied destination.
+  saveAndConnect: Save and connect
+  connectEffect: Save and connect saves this entry and creates one symbolic link. Save only leaves it disconnected.
+  connectFailed: The saved connection was kept. You can connect it later after resolving the problem.
+  linkUncertain: The connection is saved, but the link's final state could not be verified. Do not repeat the operation before checking the storage.
+  resultRefreshFailed: The dashboard could not be refreshed and may show previous results.
+  inspectBeforeContinuing: Select Check again or reopen this storage before making further changes.
+  results:
+    created: Connection saved. No link was created.
+    connected: Connection saved and connected.
+    savedNotConnected: Connection saved. Could not complete connecting.
+    unknown: Could not verify whether the connection was saved or connected.
+    saveUncertain: Could not verify whether the connection was saved. Link creation was not attempted.
+  connectReasons:
+    changed: The source, destination, or configuration changed during the operation.
+    occupied: The destination is occupied. Yonder will not replace it.
+    journal: The safety journal needs inspection before another link operation.
+    unavailable: Yonder could not safely complete or verify link creation.
   previewNote: Preparation is not write authority. A one-time final confirmation is required before yonder.yaml changes.
   prepareWrite: Prepare configuration update
   preparingWrite: Checking configuration…
   confirmTitle: Ready to update yonder.yaml
   confirmEffect: Fresh checks passed. Confirming will replace only this configuration with a validated version containing the proposed entry.
   confirmUnchanged: No symbolic link will be created automatically. Applying the connection remains a separate action.
-  confirmWrite: Save connection
+  confirmWrite: Save only
   writing: Updating…
   cancelWrite: Cancel
   created: Connection saved. Select Connect to create its symbolic link.

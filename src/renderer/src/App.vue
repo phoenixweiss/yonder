@@ -36,6 +36,10 @@ const removalPreparation = ref(null)
 const removalErrorKey = ref('')
 const removalBusy = ref(false)
 const dashboardNoticeKey = ref('')
+const draftConnectionResult = ref(null)
+const connectionWritesBlocked = computed(() =>
+  Boolean(draftConnectionResult.value?.uncertain || draftConnectionResult.value?.refreshFailed)
+)
 const connectionDraftBusy = ref(false)
 const connectionDraftErrorKey = ref('')
 const connectionDraftIdEdited = ref(false)
@@ -108,6 +112,7 @@ function inspectionErrorKey(status) {
 }
 
 function showWelcome() {
+  draftConnectionResult.value = null
   view.value = 'welcome'
   creationErrorKey.value = ''
   creationOpenErrorKey.value = ''
@@ -137,6 +142,7 @@ async function openStorage() {
     const result = await window.yonder.chooseStorageFolderForOpening(i18next.resolvedLanguage)
     if (result.status === 'cancelled') return
     if (result.status === 'opened') {
+      draftConnectionResult.value = null
       storageId.value = result.storageId
       storage.value = result.storage
       selectedPreview.value = null
@@ -194,7 +200,19 @@ function connectionDraftError(status) {
   return keys[status] ?? 'connectionDraft.errors.unavailable'
 }
 
+function draftConnectReasonKey(reason) {
+  if (['stateChanged', 'sourceMissing', 'parentsMissing', 'selectionExpired'].includes(reason)) {
+    return 'connectionDraft.connectReasons.changed'
+  }
+  if (reason === 'destinationOccupied') return 'connectionDraft.connectReasons.occupied'
+  if (reason.startsWith('journal') || reason === 'recoveryRequired')
+    return 'connectionDraft.connectReasons.journal'
+  return 'connectionDraft.connectReasons.unavailable'
+}
+
 function showConnectionDraft() {
+  if (connectionWritesBlocked.value) return
+  draftConnectionResult.value = null
   resetConnectionDraft()
   connectionDraft.value.id = suggestConnectionId(
     '',
@@ -302,31 +320,42 @@ async function previewConnectionDraft() {
   }
 }
 
-async function confirmConnectionDraftWrite() {
+async function confirmConnectionDraftWrite(mode = 'save') {
   if (!connectionDraftPreparation.value || connectionDraftBusy.value) return
-  const token = connectionDraftPreparation.value.token
+  const token =
+    mode === 'connect'
+      ? connectionDraftPreparation.value.connectToken
+      : connectionDraftPreparation.value.token
+  if (!token) return
   connectionDraftWriteErrorKey.value = ''
   connectionDraftBusy.value = true
   try {
-    const result = await window.yonder.confirmConnectionDraftWrite(token)
+    const result =
+      mode === 'connect'
+        ? await window.yonder.confirmConnectionDraftAndConnect(token)
+        : await window.yonder.confirmConnectionDraftWrite(token)
     connectionDraftPreparation.value = null
-    if (result.status === 'created') {
+    if (['created', 'connected', 'savedNotConnected'].includes(result.status)) {
+      draftConnectionResult.value =
+        mode === 'connect' || !result.storageId || !result.storage
+          ? { ...result, refreshFailed: !result.storageId || !result.storage }
+          : null
       if (result.storageId && result.storage) {
         storageId.value = result.storageId
         storage.value = result.storage
-        dashboardNoticeKey.value = 'connectionDraft.created'
+        dashboardNoticeKey.value = mode === 'save' ? 'connectionDraft.created' : ''
       } else {
-        dashboardNoticeKey.value = 'connectionDraft.createdRefreshFailed'
+        dashboardNoticeKey.value = ''
       }
       resetConnectionDraft()
       view.value = 'dashboard'
       return
     }
     if (result.status === 'writeUncertain') {
-      inspectionError.value = {
-        key: 'connectionDraft.errors.writeUncertain',
-        path: storage.value?.configPath ?? '',
-        previousResults: true
+      draftConnectionResult.value = {
+        status: 'saveUncertain',
+        uncertain: true,
+        refreshFailed: true
       }
       resetConnectionDraft()
       view.value = 'dashboard'
@@ -335,6 +364,12 @@ async function confirmConnectionDraftWrite() {
     connectionDraftWriteErrorKey.value = connectionDraftError(result.status)
   } catch {
     connectionDraftPreparation.value = null
+    if (mode === 'connect') {
+      draftConnectionResult.value = { status: 'unknown', uncertain: true, refreshFailed: true }
+      resetConnectionDraft()
+      view.value = 'dashboard'
+      return
+    }
     connectionDraftWriteErrorKey.value = 'connectionDraft.errors.unavailable'
   } finally {
     connectionDraftBusy.value = false
@@ -406,6 +441,7 @@ async function waitForReview() {
 }
 
 async function showConnectionPreview(connection) {
+  if (connectionWritesBlocked.value) return
   const preview = connectionPreview(connection)
   if (preview?.status !== 'ready') return
   selectedPreview.value = { connection, preview }
@@ -538,6 +574,7 @@ function connectionDisconnectErrorKey(status) {
 }
 
 async function showConnectionDisconnect(connection) {
+  if (connectionWritesBlocked.value) return
   selectedDisconnect.value = connection
   disconnectPreparation.value = null
   disconnectErrorKey.value = ''
@@ -639,6 +676,7 @@ function connectionRemovalErrorKey(status) {
 }
 
 async function showConnectionRemoval(connection) {
+  if (connectionWritesBlocked.value) return
   selectedRemoval.value = connection
   removalPreparation.value = null
   removalErrorKey.value = ''
@@ -730,6 +768,7 @@ async function recheckStorage() {
     const result = await window.yonder.recheckStorage(storageId.value)
     if (result.status === 'opened') {
       storage.value = result.storage
+      draftConnectionResult.value = null
       return
     }
     inspectionError.value = {
@@ -1108,12 +1147,6 @@ async function confirmCreation() {
           </dd>
         </div>
         <div>
-          <dt>{{ $t('connectionDraft.configFile') }}</dt>
-          <dd>
-            <code>{{ connectionDraftPreview.configPath }}</code>
-          </dd>
-        </div>
-        <div>
           <dt>{{ $t('connectionDraft.source') }}</dt>
           <dd>
             <code>{{ connectionDraftPreview.sourcePath }}</code>
@@ -1127,11 +1160,7 @@ async function confirmCreation() {
         </div>
       </dl>
 
-      <details class="draft-yaml-preview">
-        <summary>{{ $t('connectionDraft.yamlEntry') }}</summary>
-        <pre><code>{{ connectionDraftPreview.yaml }}</code></pre>
-      </details>
-      <p class="preview-effect">{{ $t('connectionDraft.previewEffect') }}</p>
+      <p class="preview-effect">{{ $t('connectionDraft.connectEffect') }}</p>
       <p class="preview-unchanged">{{ $t('connectionDraft.previewUnchanged') }}</p>
 
       <p v-if="connectionDraftWriteErrorKey" class="flow-error" role="alert">
@@ -1140,34 +1169,48 @@ async function confirmCreation() {
 
       <div v-if="connectionDraftPreparation" class="flow-actions">
         <button
+          v-if="connectionDraftPreparation.connectToken"
           type="button"
           class="primary-action"
           :disabled="connectionDraftBusy"
-          @click="confirmConnectionDraftWrite"
+          @click="confirmConnectionDraftWrite('connect')"
+        >
+          {{
+            connectionDraftBusy
+              ? $t('connectionDraft.writing')
+              : $t('connectionDraft.saveAndConnect')
+          }}
+        </button>
+        <button
+          type="button"
+          :class="connectionDraftPreparation.connectToken ? 'secondary-action' : 'primary-action'"
+          :disabled="connectionDraftBusy"
+          @click="confirmConnectionDraftWrite('save')"
         >
           {{
             connectionDraftBusy ? $t('connectionDraft.writing') : $t('connectionDraft.confirmWrite')
           }}
         </button>
-        <button
-          type="button"
-          class="secondary-action"
-          :disabled="connectionDraftBusy"
-          @click="closeConnectionDraft"
-        >
-          {{ $t('connectionDraft.cancelWrite') }}
-        </button>
-        <button
-          type="button"
-          class="secondary-action"
-          :disabled="connectionDraftBusy"
-          @click="editConnectionDraft"
-        >
-          {{ $t('connectionDraft.edit') }}
-        </button>
       </div>
+      <button
+        v-if="connectionDraftPreparation"
+        type="button"
+        class="draft-back-action"
+        :disabled="connectionDraftBusy"
+        @click="editConnectionDraft"
+      >
+        {{ $t('connectionDraft.edit') }}
+      </button>
+      <details class="draft-yaml-preview">
+        <summary>{{ $t('connectionDraft.yamlEntry') }}</summary>
+        <p>
+          {{ $t('connectionDraft.configFile') }}:
+          <code>{{ connectionDraftPreview.configPath }}</code>
+        </p>
+        <pre><code>{{ connectionDraftPreview.yaml }}</code></pre>
+      </details>
 
-      <template v-else>
+      <template v-if="!connectionDraftPreparation">
         <div class="flow-actions">
           <button
             type="button"
@@ -1223,6 +1266,29 @@ async function confirmCreation() {
       <p v-if="dashboardNoticeKey" class="dashboard-notice" role="status">
         {{ $t(dashboardNoticeKey) }}
       </p>
+      <div
+        v-if="draftConnectionResult"
+        :class="draftConnectionResult.status === 'connected' ? 'dashboard-notice' : 'flow-error'"
+        :role="draftConnectionResult.status === 'connected' ? 'status' : 'alert'"
+      >
+        <strong>{{ $t(`connectionDraft.results.${draftConnectionResult.status}`) }}</strong>
+        <p v-if="draftConnectionResult.reason">
+          {{
+            $t(
+              draftConnectionResult.uncertain
+                ? 'connectionDraft.linkUncertain'
+                : 'connectionDraft.connectFailed'
+            )
+          }}
+        </p>
+        <p v-if="draftConnectionResult.reason">
+          {{ $t(draftConnectReasonKey(draftConnectionResult.reason)) }}
+        </p>
+        <p v-if="draftConnectionResult.refreshFailed">
+          {{ $t('connectionDraft.resultRefreshFailed') }}
+        </p>
+        <p v-if="connectionWritesBlocked">{{ $t('connectionDraft.inspectBeforeContinuing') }}</p>
+      </div>
 
       <div class="inspection-summary" aria-live="polite">
         <span>{{ $t('inspection.connections') }}: {{ storage.connections.length }}</span>
@@ -1233,14 +1299,24 @@ async function confirmCreation() {
       <div v-if="storage.connections.length === 0" class="empty-connections">
         <h3>{{ $t('inspection.emptyTitle') }}</h3>
         <p>{{ $t('inspection.emptyText') }}</p>
-        <button type="button" class="primary-action" @click="showConnectionDraft">
+        <button
+          type="button"
+          class="primary-action"
+          :disabled="connectionWritesBlocked"
+          @click="showConnectionDraft"
+        >
           {{ $t('connectionDraft.open') }}
         </button>
       </div>
 
       <div v-else class="connection-list">
         <div class="connection-list-actions">
-          <button type="button" class="secondary-action" @click="showConnectionDraft">
+          <button
+            type="button"
+            class="secondary-action"
+            :disabled="connectionWritesBlocked"
+            @click="showConnectionDraft"
+          >
             {{ $t('connectionDraft.open') }}
           </button>
         </div>
@@ -1285,6 +1361,7 @@ async function confirmCreation() {
             <button
               type="button"
               class="secondary-action"
+              :disabled="connectionWritesBlocked"
               @click="showConnectionDisconnect(connection)"
             >
               {{ $t('disconnect.open') }}
@@ -1309,6 +1386,7 @@ async function confirmCreation() {
               v-if="connectionPreview(connection).status === 'ready'"
               type="button"
               class="primary-action"
+              :disabled="connectionWritesBlocked"
               @click="showConnectionPreview(connection)"
             >
               {{ $t('preview.open') }}
@@ -1324,6 +1402,7 @@ async function confirmCreation() {
             <button
               type="button"
               class="secondary-action"
+              :disabled="connectionWritesBlocked"
               @click="showConnectionRemoval(connection)"
             >
               {{ $t('removal.open') }}

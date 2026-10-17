@@ -32,6 +32,7 @@ The application can:
 - create or open a storage;
 - inspect every configured connection without changing files;
 - add a connection definition after a separate review and confirmation;
+- save and connect with one confirmation, or save only for later;
 - create one verified symbolic link at a time;
 - disconnect a link without deleting its source or configuration;
 - remove a safely disconnected connection from the configuration.
@@ -45,6 +46,10 @@ configuration or filesystem state has changed.
 
 Opening and rechecking a storage are read-only. Yonder never moves source data, and
 disconnecting a connection removes only the exact verified symbolic link.
+
+If saving succeeds but connecting fails, the saved definition is kept. Yonder reports
+the partial result without automatic rollback or retry. Uncertain results require
+checking the storage before another change.
 
 ## Download
 

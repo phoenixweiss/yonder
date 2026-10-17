@@ -17,6 +17,8 @@ import { ConnectionRemovalError, createConnectionRemovalController } from './con
 import { inspectStorage, StorageInspectionError } from './inspection.js'
 import { createStorageConfig, inspectStorageDirectory, StorageCreationError } from './storage.js'
 import { CONFIG_FILENAME } from '../shared/config.js'
+import { createSaveAndConnect } from './connection-save-and-connect.js'
+import { createOperationGate } from './operation-gate.js'
 
 let mainWindow
 let pendingCreation
@@ -124,7 +126,10 @@ function clearPendingAuthoring() {
 }
 
 function installStorageHandlers() {
-  ipcMain.handle('storage:choose-for-opening', async (event, language) => {
+  const gate = createOperationGate()
+  const handle = (channel, action) =>
+    ipcMain.handle(channel, (...args) => gate(() => action(...args)))
+  handle('storage:choose-for-opening', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
@@ -153,7 +158,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('storage:recheck', async (event, storageId) => {
+  handle('storage:recheck', async (event, storageId) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
@@ -178,7 +183,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('storage:choose-for-creation', async (event, language) => {
+  handle('storage:choose-for-creation', async (event, language) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
@@ -206,7 +211,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('storage:create-config', async (event, request) => {
+  handle('storage:create-config', async (event, request) => {
     if (!isTrustedIpcEvent(event)) return { status: 'unavailable' }
     await clearPendingApply()
     await clearPendingDisconnect()
@@ -256,7 +261,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:choose-draft-source', async (event, request) => {
+  handle('connection:choose-draft-source', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
     clearPendingAuthoring()
     if (
@@ -289,7 +294,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:choose-draft-target-parent', async (event, request) => {
+  handle('connection:choose-draft-target-parent', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
     clearPendingAuthoring()
     if (
@@ -322,7 +327,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:preview-draft', async (event, request) => {
+  handle('connection:preview-draft', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !draftController) return { status: 'unavailable' }
     clearPendingAuthoring()
     if (
@@ -350,7 +355,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:prepare-draft-write', async (event, request) => {
+  handle('connection:prepare-draft-write', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !authoringController) return { status: 'unavailable' }
     if (
       !request ||
@@ -389,7 +394,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:confirm-draft-write', async (event, token) => {
+  const confirmDraft = async (event, token, mode = 'save') => {
     if (!isTrustedIpcEvent(event) || !authoringController) return { status: 'unavailable' }
     if (!activeStorage || pendingDraftStorageId !== activeStorage.id) {
       return { status: 'invalidSelection' }
@@ -398,28 +403,32 @@ function installStorageHandlers() {
     const draftStorage = { ...activeStorage }
     pendingDraftStorageId = ''
     try {
-      const result = await authoringController.confirm(token)
+      const result = await authoringController.confirm(token, mode)
       draftController?.clear()
       if (activeStorage?.id !== draftStorage.id || result.connectionId === undefined) {
-        return { status: 'created', refreshFailed: true }
+        return { ...result, refreshFailed: true }
       }
       try {
         const storage = await inspectStorage(draftStorage.folderPath, {
           homeDirectory: app.getPath('home'),
           systemPlatform: process.platform
         })
-        return { status: 'created', storageId: draftStorage.id, storage }
+        return { ...result, storageId: draftStorage.id, storage }
       } catch {
-        return { status: 'created', refreshFailed: true }
+        return { ...result, refreshFailed: true }
       }
     } catch (error) {
       return {
         status: error instanceof ConnectionAuthoringError ? error.code : 'unavailable'
       }
     }
-  })
+  }
+  handle('connection:confirm-draft-write', (event, token) => confirmDraft(event, token))
+  handle('connection:confirm-draft-and-connect', (event, token) =>
+    confirmDraft(event, token, 'connect')
+  )
 
-  ipcMain.handle('connection:cancel-draft-write', async (event, token) => {
+  handle('connection:cancel-draft-write', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !authoringController) return { status: 'unavailable' }
     pendingDraftStorageId = ''
     try {
@@ -431,7 +440,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:prepare-apply', async (event, request) => {
+  handle('connection:prepare-apply', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !applyController) return { status: 'unavailable' }
     if (
       !request ||
@@ -470,7 +479,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:confirm-apply', async (event, token) => {
+  handle('connection:confirm-apply', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !applyController) return { status: 'unavailable' }
     if (!activeStorage || pendingApplyStorageId !== activeStorage.id) {
       return { status: 'invalidSelection' }
@@ -499,7 +508,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:cancel-apply', async (event, token) => {
+  handle('connection:cancel-apply', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !applyController) return { status: 'unavailable' }
     pendingApplyStorageId = ''
     try {
@@ -509,7 +518,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:prepare-disconnect', async (event, request) => {
+  handle('connection:prepare-disconnect', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !disconnectController) return { status: 'unavailable' }
     if (
       !request ||
@@ -546,7 +555,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:confirm-disconnect', async (event, token) => {
+  handle('connection:confirm-disconnect', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !disconnectController) return { status: 'unavailable' }
     if (!activeStorage || pendingDisconnectStorageId !== activeStorage.id) {
       return { status: 'invalidSelection' }
@@ -575,7 +584,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:cancel-disconnect', async (event, token) => {
+  handle('connection:cancel-disconnect', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !disconnectController) return { status: 'unavailable' }
     pendingDisconnectStorageId = ''
     try {
@@ -587,7 +596,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:prepare-removal', async (event, request) => {
+  handle('connection:prepare-removal', async (event, request) => {
     if (!isTrustedIpcEvent(event) || !removalController) return { status: 'unavailable' }
     if (
       !request ||
@@ -622,7 +631,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:confirm-removal', async (event, token) => {
+  handle('connection:confirm-removal', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !removalController) return { status: 'unavailable' }
     if (!activeStorage || pendingRemovalStorageId !== activeStorage.id) {
       return { status: 'invalidSelection' }
@@ -649,7 +658,7 @@ function installStorageHandlers() {
     }
   })
 
-  ipcMain.handle('connection:cancel-removal', async (event, token) => {
+  handle('connection:cancel-removal', async (event, token) => {
     if (!isTrustedIpcEvent(event) || !removalController) return { status: 'unavailable' }
     pendingRemovalStorageId = ''
     try {
@@ -668,9 +677,6 @@ app.whenReady().then(async () => {
   draftController = createConnectionDraftController({
     homeDirectory: app.getPath('home')
   })
-  authoringController = createConnectionAuthoringController({
-    previewDraft: (storagePath, request) => draftController.preview(storagePath, request)
-  })
   disconnectController = createConnectionDisconnectController({ executable: nativeHelperPath })
   removalController = createConnectionRemovalController()
   try {
@@ -682,6 +688,10 @@ app.whenReady().then(async () => {
   } catch {
     applyController = undefined
   }
+  authoringController = createConnectionAuthoringController({
+    previewDraft: (storagePath, request) => draftController.preview(storagePath, request),
+    connector: createSaveAndConnect({ applyController, homeDirectory: app.getPath('home') })
+  })
   installStorageHandlers()
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
     callback(false)

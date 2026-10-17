@@ -63,6 +63,8 @@ const api = Object.freeze({
     }),
   confirmConnectionDraftWrite: (token) =>
     ipcRenderer.invoke('connection:confirm-draft-write', token),
+  confirmConnectionDraftAndConnect: (token) =>
+    ipcRenderer.invoke('connection:confirm-draft-and-connect', token),
   cancelConnectionDraftWrite: (token) => ipcRenderer.invoke('connection:cancel-draft-write', token),
   prepareConnectionApply: (storageId, connectionId) =>
     ipcRenderer.invoke('connection:prepare-apply', { storageId, connectionId }),

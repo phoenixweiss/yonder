@@ -8,6 +8,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Save and connect creates a reviewed connection and its symbolic link with one
+  confirmation. Save only remains available without creating a link.
+- Partial-success results preserve a saved connection when link creation fails.
+  Uncertain outcomes require read-only inspection before further changes.
+
 ## [0.2.0] - 2026-10-09
 
 ### Changed

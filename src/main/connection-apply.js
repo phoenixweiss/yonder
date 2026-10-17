@@ -272,7 +272,12 @@ export function createConnectionApplyController({
     fail('recoveryRequired', publicRecovery(operation, outcome, observation))
   }
 
-  async function prepare(storagePath, connectionId, homeDirectory) {
+  async function prepare(
+    storagePath,
+    connectionId,
+    homeDirectory,
+    validateReview = async () => {}
+  ) {
     return exclusive(async () => {
       pending = null
       const started = ++generation
@@ -301,6 +306,7 @@ export function createConnectionApplyController({
       }
       requireReady(current)
       await destinationMissing(current.selection.targetPath)
+      await validateReview(current)
       const token = randomUUID()
       pending = { token, candidate: structuredClone(candidate), started }
       return {
@@ -431,5 +437,6 @@ export function createConnectionApplyController({
     await native.clear().catch(() => {})
   }
 
-  return Object.freeze({ prepare, confirm, cancel, clear })
+  const checkRecovery = () => exclusive(recoverUnresolved)
+  return Object.freeze({ prepare, confirm, cancel, clear, checkRecovery })
 }
